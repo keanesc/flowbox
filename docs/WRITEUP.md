@@ -4,9 +4,9 @@
 
 Complete and verified locally: the Next.js production build, TypeScript check, eight unit tests, role helpers, sensitive-step checks, constrained branch evaluation, retry behavior, quota boundary, HMAC validation, event idempotency, approval pause behavior, and the Nhost configuration/metadata layout checks described in the README. The seed definition evaluates its conditional branch immediately after the LLM, so the branch is based on LLM output rather than the later HTTP response.
 
-The production baseline was inspected read-only before this repair. The `public` Relay Room tables are present, while its metadata has no Actions, cron trigger, event trigger, or `reserve_org_quota` function tracking. The tracked configuration now preserves the exported Nhost-managed `auth` table metadata and adds Relay Room's complete public-table metadata in the current Nhost/Hasura CLI layout. A read-only GraphQL probe succeeds at the Nhost `/v1` endpoint; `.env.example` was corrected from the invalid `/v1/graphql` path. No live deployment or acceptance claim is made.
+The production baseline was inspected read-only before this repair. The final Nhost deployment applied migrations, metadata, and all six functions successfully. A subsequent metadata export is consistent and contains all four Actions, the cron and watched-orders event trigger, and `reserve_org_quota`; the usage permission retains its correlated `_ceq` filter. A read-only GraphQL probe succeeds at the Nhost `/v1` endpoint; `.env.example` was corrected from the invalid `/v1/graphql` path. Function secret names were verified without exposing values, real-provider mode is configured, and safe unauthenticated route probes reject requests without starting a workflow.
 
-Blocked: backend deployment and live verification until the project endpoint and Nhost deployment authentication are available. No production metadata, migration, Auth-user, function-environment, or data mutation was made. This is not evidence that the hosted scenario passes.
+Remaining: run the authenticated Org A/Org B acceptance matrix and recording with protected user sessions. No seed, Auth-user, membership, or business-data mutation was made during deployment repair.
 
 ## Schema and relationships
 
