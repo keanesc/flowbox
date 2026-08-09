@@ -14,7 +14,7 @@ Blocked: live verification. The configured GraphQL endpoint was queried through 
 
 ## Two authorization layers
 
-Hasura metadata filters every user read through the caller's `X-Hasura-User-Id` membership. Owner/editor checks gate workflow, child-step, trigger, and watched-order writes; viewers have select-only access. The usage view uses an `_exists` membership filter keyed to `X-Column-org_id`, so it cannot leak another organization's counters. The same relationship predicates apply to direct UUID queries and subscriptions.
+Hasura metadata filters every user read through the caller's `X-Hasura-User-Id` membership. Owner/editor checks gate workflow, child-step, trigger, and watched-order writes; viewers have select-only access. The usage view uses an `_exists` membership filter correlated to the outer view row with `_ceq: ["$", "org_id"]`, while also requiring `user_id = X-Hasura-User-Id`; it therefore cannot leak another organization's counters. The same relationship predicates apply to direct UUID queries and subscriptions.
 
 The Actions reload the target workflow with the admin connection, resolve membership for the target organization, reject viewers, and validate the complete definition. `db_write` and `notify` steps are owner-only; webhook triggers are owner-only. `saveWorkflow` also verifies that an existing workflow UUID belongs to the submitted organization before replacing its children. Execution credentials remain server-side and `db_write` is limited to structured writes into `workflow_results`, never arbitrary SQL.
 

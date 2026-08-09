@@ -32,7 +32,7 @@ Set `NEXT_PUBLIC_NHOST_SUBDOMAIN`, `NEXT_PUBLIC_NHOST_REGION`, and the GraphQL U
 ## Nhost deployment
 
 1. Apply `nhost/migrations/001_initial.sql` and `003_preserve_run_history_on_workflow_save.sql`, then optionally `002_seed_demo.sql` after replacing the demo membership user IDs with real Auth user IDs.
-2. Track the tables and view in Hasura and apply `nhost/metadata/metadata.json`. If your project uses a generated metadata export, keep the permission expressions from this file: every organization-owned row is filtered through `org_members`.
+2. Track the tables and view in Hasura and apply `nhost/metadata/metadata.json`. If your project uses a generated metadata export, keep the permission expressions from this file: every organization-owned row is filtered through `org_members`. In particular, `organization_monthly_usage` must correlate its `_exists` membership test to the outer view row with `org_id: {_ceq: ["$", "org_id"]}`; do not use a literal `X-Column-org_id` comparison.
 3. Configure the Actions and event/cron webhooks to the deployed function URLs. Nhost Functions use the folder names as paths.
 4. Add `NHOST_ADMIN_SECRET`, `NHOST_GRAPHQL_URL`, `GROQ_API_KEY`, `WORKFLOW_LLM_STUB`, `WEBHOOK_SIGNING_SECRET`, and `RELAY_ACTION_SECRET` to the Functions environment. Configure the identical `RELAY_ACTION_SECRET` in Hasura's environment so the three authenticated Actions can send their trusted internal header. Add only the public Nhost/GraphQL variables to Vercel.
 5. Deploy `apps/web` to Vercel with the repository root and `pnpm --filter @relayroom/web build` as the build command.
