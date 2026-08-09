@@ -3,6 +3,7 @@
     "name": "workflow-scheduler",
     "webhook": "{{NHOST_FUNCTIONS_URL}}/scheduledWorkflowStart",
     "schedule": "* * * * *",
+    "include_in_metadata": true,
     "payload": {},
     "headers": [
       {
