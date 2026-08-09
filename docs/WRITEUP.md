@@ -2,11 +2,11 @@
 
 ## Status as of 2026-08-09
 
-Complete and verified locally: the Next.js production build, TypeScript check, eight unit tests, metadata JSON parsing, role helpers, sensitive-step checks, constrained branch evaluation, retry behavior, quota boundary, HMAC validation, event idempotency, and approval pause behavior. The seed definition now evaluates its conditional branch immediately after the LLM, so the branch is based on LLM output rather than the later HTTP response.
+Complete and verified locally: the Next.js production build, TypeScript check, eight unit tests, metadata JSON parsing, role helpers, sensitive-step checks, constrained branch evaluation, retry behavior, quota boundary, HMAC validation, event idempotency, and approval pause behavior. The seed definition now evaluates its conditional branch immediately after the LLM, so the branch is based on LLM output rather than the later HTTP response. The Vercel production deployment for commit `72ec130` is Ready; read-only frontend and GraphQL probes both returned HTTP 200.
 
 Implemented but not verified against live Nhost: Auth/session wiring, organization-scoped GraphQL queries, Hasura permissions and relationships, Actions, cron/event metadata, server-side Groq mode, signed webhook handling, function execution, subscriptions, quota SQL, and the hosted frontend. The frontend URL documented in the repository is https://flowbox-web.vercel.app; no deploy receipt is present here.
 
-Blocked: live verification. The configured GraphQL endpoint was queried through the Nhost connector and returned `access-denied: invalid "x-hasura-admin-secret"/"x-hasura-access-key"`. Direct DNS access to the GraphQL endpoint, `flowbox-web.vercel.app`, and the GitHub remote also failed in this environment. Although local `.env` contains deployment values, the connector did not accept the configured admin credential, so no live mutation was attempted and no Auth test accounts were created. This is an external access/network blocker, not evidence that the hosted scenario passes.
+Blocked: backend deployment and live verification. The exported production metadata is older than this repository: it retains the literal `X-Column-org_id` filter and has no configured Actions, cron trigger, or `watched_orders` event trigger, although the required function routes respond to read-only probes. An Nhost CLI deployment for commit `72ec130` reached the interactive OAuth sign-in and could not continue without completing that authentication; no production metadata, migration, Auth-user, function-environment, or data mutation was made. This is not evidence that the hosted scenario passes.
 
 ## Schema and relationships
 
