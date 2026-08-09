@@ -6,6 +6,8 @@ This is a recording procedure, not a claim that the hosted run has already been 
 
 Before recording, verify the deployed `user` schema exposes `triggerWorkflowRun`, `approveStep`, `saveWorkflow`, and `webhookStartWorkflow`; that `workflow-scheduler` and `watched-orders-workflow` are enabled; and that the deployed functions have the server-only variables listed below. Then perform a real owner/editor run and check: the LLM result selects the conditional path, retries/errors remain observable, quota rises once, the approval step pauses then records `approved_by` and `approved_at`, and the completed run remains visible.
 
+As of 2026-08-09, the local configuration/build checks and read-only endpoint probes pass, but no protected Org A/Org B session or active OBS instance is available in this workspace. A hydration repair is present in source and verified only against a local production build; deploy it before recording. This readiness gate is not passed, so do not start capture or claim any live scenario until the authenticated checks below complete.
+
 Use real Org A and Org B sessions for the role and isolation evidence. Administrator access is only appropriate for deployment inspection; it is not evidence of user permissions. Stop and repair the failed layer if any readiness probe fails.
 
 ## Capture setup

@@ -8,6 +8,12 @@ The production baseline was inspected read-only before this repair. The final Nh
 
 Remaining: run the authenticated Org A/Org B acceptance matrix and recording with protected user sessions. No seed, Auth-user, membership, or business-data mutation was made during deployment repair.
 
+### Latest preflight (2026-08-09)
+
+The checked-in Nhost configuration validates, TypeScript and all eight unit tests pass, and the frontend production build succeeds. Read-only probes reached both the configured GraphQL endpoint and hosted frontend with HTTP 200. Nhost's read-only listing confirms the deployed names `GROQ_API_KEY`, `WEBHOOK_SIGNING_SECRET`, and `RELAY_ACTION_SECRET` are present without exposing their values; its latest listed deployment succeeded. A public, clean-browser visit to the hosted sign-in page revealed a React hydration error caused by resolving Nhost auth state differently on the server and initial client render. The source now holds the deterministic connecting shell until hydration; a rebuilt local production page has no browser-console errors and all assets return HTTP 200. This correction is not evidence that the hosted deployment has been updated.
+
+No saved authenticated Org A/Org B sessions or credentials were present, OBS was not running, and the local function environment lacked `RELAY_ACTION_SECRET`. The live acceptance matrix, real `graphql-ws` frames, signed webhook, database-event run, quota observation, reconnection diagnostic, and recording are therefore still unverified. No production mutation was made.
+
 ## Schema and relationships
 
 `organizations` owns `org_members`, `workflows`, quota counters, and `watched_orders`. A workflow owns ordered `workflow_steps`, `workflow_triggers`, and `workflow_runs`; each run owns one `step_runs` row per step. `workflow_results` and `notification_deliveries` are auditable side-effect tables. `organization_monthly_usage` is the org-level quota view. Foreign keys cascade from organization/workflow/run boundaries, and `(workflow_id, position)` plus `(workflow_run_id, workflow_step_id)` prevent ambiguous execution.
