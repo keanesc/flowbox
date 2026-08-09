@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@nhost/cli':
+        specifier: 1.49.0-beta01
+        version: 1.49.0-beta01
       '@types/node':
         specifier: ^22.10.2
         version: 22.20.1
@@ -423,6 +426,31 @@ packages:
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [win32]
+
+  '@nhost/cli-darwin-arm64@1.49.0-beta01':
+    resolution: {integrity: sha512-ZocL8NxSCGx5QaKKDjnBo2cj37TBjTeeQ+5GtvRCU0ObqBBzZQkBwlWVOeic9ini/iXmECa+DCWigQSzY9BWYg==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@nhost/cli-darwin-x64@1.49.0-beta01':
+    resolution: {integrity: sha512-+OZck2+meGdPybd7jOldlAnmasGtqSmosE81uVaHHKhjOZoH4ER9Ac/GPv48m366fShEe7sdDYL0hzqKyb+FRQ==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@nhost/cli-linux-arm64@1.49.0-beta01':
+    resolution: {integrity: sha512-4zwCljqtt4yaBR17fU3dNAibAVpqW5NscqctAIb2LqxXCRGYNEwNO1MfcpMa9I4nMXRdzCLNZlpHX+Agr9GnUg==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@nhost/cli-linux-x64@1.49.0-beta01':
+    resolution: {integrity: sha512-jh3wBFvvm4MnJrVyp0c2VCNLyvArepNwyWxhNnCrgrinatIhCz4M4JUoW9AvM/CgWjGcbusCKlK+/x8x2UBJAw==}
+    cpu: [x64]
+    os: [linux]
+
+  '@nhost/cli@1.49.0-beta01':
+    resolution: {integrity: sha512-IgkDAcuVxTxVTk6wG8Esx07ze9zG6xmFIoOCoLVJvz2zWtzCajx8xI/uU69R2alOaslDv33/7/p+9VuFzAFitQ==}
+    engines: {node: '>=18'}
+    hasBin: true
 
   '@nhost/graphql-js@0.3.0':
     resolution: {integrity: sha512-CVYq6wx0VbaYdpUBmfNO/6mZatHB5+YBCqFjWyxhpN1nzHCHEO6rgdL7j0qk31OFE6XAX0z7AQZSXg1Pn63GUw==}
@@ -1294,6 +1322,25 @@ snapshots:
 
   '@next/swc-win32-x64-msvc@15.5.23':
     optional: true
+
+  '@nhost/cli-darwin-arm64@1.49.0-beta01':
+    optional: true
+
+  '@nhost/cli-darwin-x64@1.49.0-beta01':
+    optional: true
+
+  '@nhost/cli-linux-arm64@1.49.0-beta01':
+    optional: true
+
+  '@nhost/cli-linux-x64@1.49.0-beta01':
+    optional: true
+
+  '@nhost/cli@1.49.0-beta01':
+    optionalDependencies:
+      '@nhost/cli-darwin-arm64': 1.49.0-beta01
+      '@nhost/cli-darwin-x64': 1.49.0-beta01
+      '@nhost/cli-linux-arm64': 1.49.0-beta01
+      '@nhost/cli-linux-x64': 1.49.0-beta01
 
   '@nhost/graphql-js@0.3.0(graphql@16.14.2)':
     dependencies:

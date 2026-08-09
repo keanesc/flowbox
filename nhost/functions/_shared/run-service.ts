@@ -75,13 +75,18 @@ export async function startRun(workflowId: string, triggerType: string, triggerI
   await graphql(`mutation Steps($steps: [step_runs_insert_input!]!) { insert_step_runs(objects: $steps) { affected_rows } }`, { steps: workflow.steps.map((step) => ({ workflow_run_id: runId, workflow_step_id: step.id, status: "pending" })) }, adminHeaders());
   const store = new Store();
   let previous: unknown = triggerInput;
-  for (const step of workflow.steps.sort((a, b) => a.position - b.position)) {
-    const result = await executeStep({ runId, orgId: workflow.orgId, workflowId: workflow.id, triggerInput, previousOutput: previous, step }, store, providers);
-    previous = result.output;
-    if (step.type === "approval_gate") return { runId, status: "paused" };
+  try {
+    for (const step of workflow.steps.sort((a, b) => a.position - b.position)) {
+      const result = await executeStep({ runId, orgId: workflow.orgId, workflowId: workflow.id, triggerInput, previousOutput: previous, step }, store, providers);
+      previous = result.output;
+      if (step.type === "approval_gate") return { runId, status: "paused" };
+    }
+    await store.setRunStatus(runId, "completed", { completed_at: new Date().toISOString() });
+    return { runId, status: "completed" };
+  } catch (error) {
+    await store.setRunStatus(runId, "failed", { error: { message: error instanceof Error ? error.message : "Workflow failed" }, completed_at: new Date().toISOString() });
+    throw error;
   }
-  await store.setRunStatus(runId, "completed", { completed_at: new Date().toISOString() });
-  return { runId, status: "completed" };
 }
 
 export async function approveRun(workflowRunId: string, stepRunId: string, decision: "approve" | "reject", session: Session) {

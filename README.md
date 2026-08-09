@@ -59,3 +59,48 @@ Quota is reserved once a run starts with `reserve_org_quota`, which locks the or
 ```
 
 See [WRITEUP.md](./WRITEUP.md) for the schema and state-machine explanation, and [RECORDING.md](./RECORDING.md) for the final walkthrough script.
+
+## Operator guide
+
+Start locally with `cp .env.example .env.local`, replace placeholders, `pnpm install`, and `pnpm dev`; open `http://localhost:3000`. The hosted URL is deployment-specific and is not committed here. Sign in with an Nhost Auth email/password. The app reads memberships from `org_members`, offers an organization selector when one account belongs to multiple organizations, and loads only that organization's workflow, latest run, quota, and step runs.
+
+The seeded demo is Northstar Studio (quota 50) and B-side Labs (quota 25), with the `Signal triage` workflow and manual, webhook, scheduled, and database-event triggers. SQL cannot create Nhost Auth users: create separate users in Auth, then insert their UUIDs into `org_members` with `owner`, `editor`, or `viewer`. The seed file deliberately does not invent credentials.
+
+Owners and editors can run a workflow; owners additionally may configure `db_write`, `notify`, and webhook triggers. Viewers can read permitted organization data only. The Builder tab lists ordered steps and the inspector shows/edit step JSON; **Save changes** persists the workflow, steps, and triggers through `saveWorkflow`. **Run workflow** calls the authenticated manual Action. **Test webhook** is a convenient authenticated run with webhook context, not a signed external webhook proof. **Runs** shows organization-scoped history. A paused gate exposes **Approve & continue** only to an owner/editor. The quota bar changes when `reserve_org_quota` accepts a run, including paused and failed runs.
+
+Live step updates use a filtered Hasura subscription on the current `workflow_run_id`; the UI also refreshes every three seconds as a recovery path. Failed runs show failed step/error data, paused runs show **Awaiting approval**, and completed runs show **Run completed**. To test isolation, sign in as the B-side user, verify Org A is absent, and use Org A IDs in direct queries/actions; expect no rows or `ORGANIZATION_ACCESS_DENIED`.
+
+### Direct API checks
+
+Use the authenticated user's JWT as `Authorization: Bearer $JWT` and the configured GraphQL URL:
+
+```bash
+curl "$NEXT_PUBLIC_GRAPHQL_URL" -H "Authorization: Bearer $JWT" \
+  -H 'content-type: application/json' \
+  --data-binary @- <<'JSON'
+{"query":"query Workspace($orgId: uuid!) { workflows(where: {org_id: {_eq: $orgId}}) { id name workflow_steps { id position type config } workflow_runs(limit: 5, order_by: {started_at: desc}) { id status } } }","variables":{"orgId":"<ORG_UUID>"}}
+JSON
+```
+
+The manual Action is:
+
+```graphql
+mutation Run($id: uuid!, $context: jsonb) {
+  triggerWorkflowRun(workflow_id: $id, trigger_context: $context) { run_id status }
+}
+```
+
+For the signed webhook, set `NHOST_FUNCTIONS_URL` to the deployed function base and run:
+
+```bash
+BODY='{"public_id":"northstar-signal","payload":{"text":"approve this signal"}}'
+SIGNATURE=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$WEBHOOK_SIGNING_SECRET" -r | cut -d' ' -f1)
+curl -i -X POST "$NHOST_FUNCTIONS_URL/webhookStartWorkflow" \
+  -H 'content-type: application/json' -H "x-workflow-signature: $SIGNATURE" -d "$BODY"
+```
+
+To exercise the database trigger, insert `watched_orders` through GraphQL as a member; Hasura should invoke `databaseEventStart`. Scheduled starts are controlled by the `workflow-scheduler` cron metadata. Verify both by observing a new run, not only a function log.
+
+## Verification and blockers
+
+Commands last run locally: `pnpm typecheck` (pass), `pnpm test` (8/8 pass), `pnpm build` (pass), metadata JSON parsing (pass), and `git diff --check` (pass). Live Nhost schema access was attempted against `hovdcnswjzhdxmqugctf` and returned `access-denied: invalid "x-hasura-admin-secret"/"x-hasura-access-key"`; no migration, Auth-user, metadata, function, or data mutation was attempted. The hosted URL and GitHub remote also failed DNS resolution from this environment. Consequently, live roles, workflow runs, provider mode, triggers, isolation, and frontend behavior remain unverified.
