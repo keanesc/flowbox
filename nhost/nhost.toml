@@ -2,6 +2,22 @@
 # root .secrets file and in the Nhost dashboard; never add them here.
 [global]
 
+[[global.environment]]
+name = 'GROQ_API_KEY'
+value = '{{ secrets.GROQ_API_KEY }}'
+
+[[global.environment]]
+name = 'WEBHOOK_SIGNING_SECRET'
+value = '{{ secrets.WEBHOOK_SIGNING_SECRET }}'
+
+[[global.environment]]
+name = 'RELAY_ACTION_SECRET'
+value = '{{ secrets.RELAY_ACTION_SECRET }}'
+
+[[global.environment]]
+name = 'WORKFLOW_LLM_STUB'
+value = 'false'
+
 [hasura]
 version = 'v2.48.10-ce'
 adminSecret = '{{ secrets.HASURA_GRAPHQL_ADMIN_SECRET }}'
