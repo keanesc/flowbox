@@ -1,8 +1,10 @@
 import { graphql } from "../_shared/graphql";
 import { startRun } from "../_shared/run-service";
+import { requireTrustedAction } from "../_shared/http";
 
-export default async function handler(req: { body: { event?: { id?: string; data?: unknown } } }, res: { status: (code: number) => { json: (data: unknown) => void } }) {
+export default async function handler(req: { body: { event?: { id?: string; data?: unknown } }; headers: Record<string, string | string[] | undefined> }, res: { status: (code: number) => { json: (data: unknown) => void } }) {
   try {
+    requireTrustedAction(req);
     const event = req.body.event ?? {};
     const eventId = event.id ?? "";
     const headers = { "x-hasura-admin-secret": process.env.NHOST_ADMIN_SECRET ?? "" };

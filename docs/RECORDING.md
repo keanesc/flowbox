@@ -4,17 +4,9 @@ This script is a live-demo checklist, not a claim that the hosted run has alread
 
 ## 00:00–03:00 — prepare
 
-Apply `nhost/migrations/001_initial.sql`, then `002_seed_demo.sql` after replacing the membership user IDs with real Auth UUIDs. Apply `nhost/metadata/metadata.json`. Deploy every function under `nhost/functions`. Set `NHOST_GRAPHQL_URL`, `NHOST_ADMIN_SECRET`, `WEBHOOK_SIGNING_SECRET`, `WORKFLOW_LLM_STUB=false`, and `GROQ_API_KEY` for a real provider demo; use `WORKFLOW_LLM_STUB=true` only when explicitly labeling the demo as stub mode.
+Apply `nhost/migrations/001_initial.sql` and `003_preserve_run_history_on_workflow_save.sql`, then `002_seed_demo.sql` after replacing the membership user IDs with real Auth UUIDs. Apply `nhost/metadata/metadata.json`. Deploy every function under `nhost/functions`. Set `NHOST_GRAPHQL_URL`, `NHOST_ADMIN_SECRET`, `WEBHOOK_SIGNING_SECRET`, `RELAY_ACTION_SECRET`, `WORKFLOW_LLM_STUB=false`, and `GROQ_API_KEY` for a real provider demo; use `WORKFLOW_LLM_STUB=true` only when explicitly labeling the demo as stub mode.
 
-Create separate Auth users and memberships:
-
-```text
-Org A / Northstar Studio: owner-a@example.test (owner), editor-a@example.test (editor), viewer-a@example.test (viewer)
-Org B / B-side Labs:     owner-b@example.test (owner), viewer-b@example.test (viewer)
-Passwords: use the temporary passwords created in Nhost Auth; do not place them in the repository.
-```
-
-Record the actual UUIDs, the Org A workflow UUID `00000000-0000-0000-0000-0000000000f1` if the seed was used, and the webhook public ID `northstar-signal`.
+Create separate Auth users and memberships for an Org A owner/editor/viewer and an Org B user. Keep credentials and Auth UUIDs in the deployment password manager or Nhost dashboard; never commit them to this repository. Record the actual workflow UUID and webhook public ID only in the private demo notes.
 
 ## 03:00–07:00 — Org A owner
 

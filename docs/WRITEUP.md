@@ -4,7 +4,7 @@
 
 Complete and verified locally: the Next.js production build, TypeScript check, eight unit tests, metadata JSON parsing, role helpers, sensitive-step checks, constrained branch evaluation, retry behavior, quota boundary, HMAC validation, event idempotency, and approval pause behavior. The seed definition now evaluates its conditional branch immediately after the LLM, so the branch is based on LLM output rather than the later HTTP response.
 
-Implemented but not verified against live Nhost: Auth/session wiring, organization-scoped GraphQL queries, Hasura permissions and relationships, Actions, cron/event metadata, server-side Groq mode, signed webhook handling, function execution, subscriptions, quota SQL, and the hosted frontend. No hosted URL or deploy receipt is present in this workspace.
+Implemented but not verified against live Nhost: Auth/session wiring, organization-scoped GraphQL queries, Hasura permissions and relationships, Actions, cron/event metadata, server-side Groq mode, signed webhook handling, function execution, subscriptions, quota SQL, and the hosted frontend. The frontend URL documented in the repository is https://flowbox-web.vercel.app; no deploy receipt is present here.
 
 Blocked: live verification. The configured GraphQL endpoint was queried through the Nhost connector and returned `access-denied: invalid "x-hasura-admin-secret"/"x-hasura-access-key"`. Direct DNS access to the GraphQL endpoint, `flowbox-web.vercel.app`, and the GitHub remote also failed in this environment. Although local `.env` contains deployment values, the connector did not accept the configured admin credential, so no live mutation was attempted and no Auth test accounts were created. This is an external access/network blocker, not evidence that the hosted scenario passes.
 
@@ -26,10 +26,10 @@ All four entrypoints converge on `startRun`: manual Action, signed webhook, sche
 
 ## Triggers and real/stub providers
 
-Manual execution is the visible **Run workflow** button. The signed inbound endpoint is `POST /webhookStartWorkflow`; cron invokes `/scheduledWorkflowStart`; Hasura's `watched-orders-workflow` event trigger invokes `/databaseEventStart` and uses `processed_events` for idempotency. The UI's **Test webhook** button invokes the authenticated run Action with webhook context for convenience; it does not possess the signing secret and therefore is not proof of the external signed endpoint. Use the curl procedure in `README.md` for that proof.
+Manual execution is the visible **Run workflow** button. The signed inbound endpoint is `POST /webhookStartWorkflow`; cron invokes `/scheduledWorkflowStart`; Hasura's `watched-orders-workflow` event trigger invokes `/databaseEventStart` and uses `processed_events` for idempotency. The UI does not simulate webhooks: use the signed curl procedure in `README.md` to prove the external endpoint.
 
 Set `WORKFLOW_LLM_STUB=true` for deterministic local/CI mode. It waits 450 ms and returns a disclosed `provider: stub` response. The local deployment configuration currently sets `WORKFLOW_LLM_STUB=false`, but no live workflow could be started; therefore Groq was not proven.
 
 ## Known limitations
 
-The current frontend edits step JSON configuration and saves the complete definition; it does not yet provide a visual add/reorder canvas or membership-management screen. The hosted environment must apply migrations and metadata, deploy all function folders, configure Action URLs/secrets, create Auth users, and provide a frontend URL before the exact live acceptance scenario can be claimed.
+The current frontend provides structured fields for the supported steps plus simple add/remove/move controls; it intentionally does not use a drag-and-drop canvas or include membership-management UI. The hosted environment must apply the migration and metadata, deploy all function folders, configure Action URLs/secrets, and create Auth users before the exact live acceptance scenario can be claimed.

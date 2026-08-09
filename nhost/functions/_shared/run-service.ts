@@ -97,13 +97,18 @@ export async function approveRun(workflowRunId: string, stepRunId: string, decis
   const role = await roleFor(row.workflow_run.workflow.org_id, session);
   requireRole(role ? { orgId: row.workflow_run.workflow.org_id, userId: session.userId ?? "", role } : undefined, ["owner", "editor"]);
   const approvedAt = new Date().toISOString();
-  const update = await graphql<{ update_step_runs: { affected_rows: number } }>(`mutation Approve($id: uuid!, $userId: uuid!, $approvedAt: timestamptz!) { update_step_runs(where: {id: {_eq: $id}, status: {_eq: "paused"}}, _set: {status: "completed", approved_by: $userId, approved_at: $approvedAt}) { affected_rows } }`, { id: stepRunId, userId: session.userId, approvedAt }, adminHeaders());
+  const update = await graphql<{ update_step_runs: { affected_rows: number } }>(`mutation Approve($id: uuid!, $userId: uuid!, $approvedAt: timestamptz!) { update_step_runs(where: {id: {_eq: $id}, status: {_eq: "paused"}}, _set: {status: "completed", approved_by: $userId, approved_at: $approvedAt, completed_at: $approvedAt}) { affected_rows } }`, { id: stepRunId, userId: session.userId, approvedAt }, adminHeaders());
   if (update.update_step_runs.affected_rows !== 1) throw new Error("APPROVAL_ALREADY_HANDLED");
   await graphql(`mutation Resume($id: uuid!) { update_workflow_runs_by_pk(pk_columns: {id: $id}, _set: {status: running}) { id } }`, { id: workflowRunId }, adminHeaders());
   const steps = row.workflow_run.workflow.workflow_steps.filter((step) => step.position > row.workflow_step.position).map(normalizeStep);
   let previous: unknown = { approved: true };
   const store = new Store();
-  for (const step of steps) { const result = await executeStep({ runId: workflowRunId, orgId: row.workflow_run.workflow.org_id, workflowId: row.workflow_run.workflow.id, triggerInput: {}, previousOutput: previous, step }, store, providers); previous = result.output; if (step.type === "approval_gate") return { runId: workflowRunId, status: "paused" }; }
-  await store.setRunStatus(workflowRunId, "completed", { completed_at: new Date().toISOString() });
-  return { runId: workflowRunId, status: "completed" };
+  try {
+    for (const step of steps) { const result = await executeStep({ runId: workflowRunId, orgId: row.workflow_run.workflow.org_id, workflowId: row.workflow_run.workflow.id, triggerInput: {}, previousOutput: previous, step }, store, providers); previous = result.output; if (step.type === "approval_gate") return { runId: workflowRunId, status: "paused" }; }
+    await store.setRunStatus(workflowRunId, "completed", { completed_at: new Date().toISOString() });
+    return { runId: workflowRunId, status: "completed" };
+  } catch (error) {
+    await store.setRunStatus(workflowRunId, "failed", { error: { message: error instanceof Error ? error.message : "Workflow failed" }, completed_at: new Date().toISOString() });
+    throw error;
+  }
 }

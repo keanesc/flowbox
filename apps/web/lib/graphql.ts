@@ -7,8 +7,10 @@ export const WORKSPACE_QUERY = /* GraphQL */ `
     workflows(where: {org_id: {_eq: $orgId}}, order_by: {updated_at: desc}) {
       id name description active
       workflow_steps(order_by: {position: asc}) { id position type config }
-      workflow_triggers(where: {enabled: {_eq: true}}) { id type config enabled }
-      workflow_runs(order_by: {started_at: desc}, limit: 1) { id status started_at completed_at }
+      workflow_triggers { id type config enabled }
+      workflow_runs(order_by: {started_at: desc}, limit: 20) {
+        id status trigger_type started_at completed_at error
+      }
     }
   }
 `;
