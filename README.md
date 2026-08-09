@@ -11,8 +11,9 @@ Backend: the Nhost/Hasura deployment is already configured. Apply this repositor
 ## What is included
 
 - `apps/web` — responsive workflow builder, trigger inventory, quota indicator, run history, and live-run/approval presentation.
-- `nhost/migrations` — organization, membership, workflow, run, result, notification, watched-table, quota-function, and seed SQL.
-- `nhost/metadata/metadata.json` — Hasura tracking, relationships, role permissions, Actions, cron trigger, and database event trigger.
+- `nhost/migrations/default` — deployable, timestamped Hasura migrations for the organization, workflow, run, result, notification, watched-table, and quota schema.
+- `nhost/metadata` — Hasura CLI v3 tracking, relationships, role permissions, Actions, cron trigger, and database event trigger. It retains Nhost-managed `auth` tracking from the production metadata export.
+- `nhost/seeds/default/002_seed_demo.sql` — local/demo-only template; it is never a production migration.
 - `nhost/functions` — manual `triggerWorkflowRun`, `approveStep`, signed webhook, scheduled, and database-event entrypoints sharing one execution service.
 - `tests` — role isolation, sensitive-step gating, quota, conditional evaluation, retry, approval pause, webhook signature, and event idempotency tests.
 
@@ -31,11 +32,11 @@ Set `NEXT_PUBLIC_NHOST_SUBDOMAIN`, `NEXT_PUBLIC_NHOST_REGION`, and the GraphQL U
 
 ## Nhost deployment
 
-1. Apply `nhost/migrations/001_initial.sql` and `003_preserve_run_history_on_workflow_save.sql`, then optionally `002_seed_demo.sql` after replacing the demo membership user IDs with real Auth user IDs.
-2. Track the tables and view in Hasura and apply `nhost/metadata/metadata.json`. If your project uses a generated metadata export, keep the permission expressions from this file: every organization-owned row is filtered through `org_members`. In particular, `organization_monthly_usage` must correlate its `_exists` membership test to the outer view row with `org_id: {_ceq: ["$", "org_id"]}`; do not use a literal `X-Column-org_id` comparison.
+1. Keep Nhost's Git deployment base directory at the repository root. The deploy runner reads `nhost/nhost.toml`, `nhost/config.yaml`, `nhost/migrations/default`, and the modular `nhost/metadata` directory. The timestamped `up.sql` files are idempotent; their `down.sql` files deliberately do not drop data.
+2. Do **not** run `nhost/seeds/default/002_seed_demo.sql` in production. It is a local/demo template and contains placeholder Auth user IDs.
 3. Configure the Actions and event/cron webhooks to the deployed function URLs. Nhost Functions use the folder names as paths.
 4. Add `NHOST_ADMIN_SECRET`, `NHOST_GRAPHQL_URL`, `GROQ_API_KEY`, `WORKFLOW_LLM_STUB`, `WEBHOOK_SIGNING_SECRET`, and `RELAY_ACTION_SECRET` to the Functions environment. Configure the identical `RELAY_ACTION_SECRET` in Hasura's environment so the three authenticated Actions can send their trusted internal header. Add only the public Nhost/GraphQL variables to Vercel.
-5. Deploy `apps/web` to Vercel with the repository root and `pnpm --filter @relayroom/web build` as the build command.
+5. Before a production deployment, run `nhost config validate`, the local checks below, and `nhost deployments new --subdomain hovdcnswjzhdxmqugctf --ref <pushed-commit> --follow`. A function-only deployment is not sufficient: the deployment log must show both migrations and metadata applied.
 
 ## Trigger examples
 
@@ -64,7 +65,7 @@ Quota is reserved once a run starts with `reserve_org_quota`, which locks the or
 ./node_modules/.bin/vitest run
 ```
 
-See [WRITEUP.md](./WRITEUP.md) for the schema and state-machine explanation, and [RECORDING.md](./RECORDING.md) for the final walkthrough script.
+See [WRITEUP.md](./docs/WRITEUP.md) for the schema and state-machine explanation, and [RECORDING.md](./docs/RECORDING.md) for the final walkthrough script.
 
 ## Operator guide
 
@@ -111,4 +112,4 @@ To exercise the database trigger, insert `watched_orders` through GraphQL as a m
 
 ## Verification and blockers
 
-Commands last run locally: `pnpm typecheck` (pass), `pnpm test` (8/8 pass), `pnpm build` (pass), metadata JSON parsing (pass), and `git diff --check` (pass). The Vercel production deployment for commit `72ec130` is Ready and the hosted frontend and GraphQL endpoint each returned HTTP 200 in a read-only probe. The exported live Hasura metadata is still older than this repository: it uses the literal `X-Column-org_id` predicate and has no Actions, cron trigger, or `watched_orders` event trigger. The required function routes exist, but their server-only environment cannot be verified without a completed Nhost deployment. An attempted CLI deployment reached Nhost's interactive OAuth sign-in and was not completed. Consequently, live roles, workflow runs, provider mode, triggers, isolation, and recording remain unverified; complete the Nhost OAuth deployment and re-run the readiness gate before presenting the hosted scenario.
+The production metadata baseline was exported read-only outside this repository before this repair. It contains the Nhost-managed `auth` table tracking but no Relay Room Actions, cron trigger, database event trigger, or quota-function tracking. The public schema already contains the Relay Room tables, so the deployable migrations use `IF NOT EXISTS` / `CREATE OR REPLACE` and the rollback files are intentional no-ops. Nhost serves this project's GraphQL endpoint at `/v1` (not `/v1/graphql`); `.env.example` uses the verified path. Live acceptance, provider-mode checks, and recording still require a successful Nhost deployment and readiness gate.

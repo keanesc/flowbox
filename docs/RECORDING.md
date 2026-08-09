@@ -19,7 +19,7 @@ For each automated action, hold a still frame for two seconds first. Wait for th
 
 ## 00:00–03:00 — prepare
 
-Apply `nhost/migrations/001_initial.sql` and `003_preserve_run_history_on_workflow_save.sql`, then `002_seed_demo.sql` after replacing the membership user IDs with real Auth UUIDs. Apply `nhost/metadata/metadata.json`. Deploy every function under `nhost/functions`. Set `NHOST_GRAPHQL_URL`, `NHOST_ADMIN_SECRET`, `WEBHOOK_SIGNING_SECRET`, `RELAY_ACTION_SECRET`, `WORKFLOW_LLM_STUB=false`, and `GROQ_API_KEY` for a real provider demo; use `WORKFLOW_LLM_STUB=true` only when explicitly labeling the demo as stub mode.
+Deploy the timestamped migrations in `nhost/migrations/default` and the modular metadata in `nhost/metadata` through Nhost Git deployment. Do not apply `nhost/seeds/default/002_seed_demo.sql` to production. Deploy every function under `nhost/functions`. Set `NHOST_GRAPHQL_URL`, `NHOST_ADMIN_SECRET`, `WEBHOOK_SIGNING_SECRET`, `RELAY_ACTION_SECRET`, `WORKFLOW_LLM_STUB=false`, and `GROQ_API_KEY` for a real provider demo; use `WORKFLOW_LLM_STUB=true` only when explicitly labeling the demo as stub mode.
 
 Create separate Auth users and memberships for an Org A owner/editor/viewer and an Org B user. Keep credentials and Auth UUIDs in the deployment password manager or Nhost dashboard; never commit them to this repository. Record the actual workflow UUID and webhook public ID only in the private demo notes.
 

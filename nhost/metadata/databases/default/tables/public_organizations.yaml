@@ -1,0 +1,54 @@
+{
+  "table": {
+    "schema": "public",
+    "name": "organizations"
+  },
+  "array_relationships": [
+    {
+      "name": "members",
+      "using": {
+        "foreign_key_constraint_on": {
+          "column": "org_id",
+          "table": {
+            "schema": "public",
+            "name": "org_members"
+          }
+        }
+      }
+    },
+    {
+      "name": "workflows",
+      "using": {
+        "foreign_key_constraint_on": {
+          "column": "org_id",
+          "table": {
+            "schema": "public",
+            "name": "workflows"
+          }
+        }
+      }
+    }
+  ],
+  "select_permissions": [
+    {
+      "role": "user",
+      "permission": {
+        "columns": [
+          "id",
+          "name",
+          "quota_limit",
+          "quota_used",
+          "period_started_at",
+          "period_ends_at"
+        ],
+        "filter": {
+          "members": {
+            "user_id": {
+              "_eq": "X-Hasura-User-Id"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "function": {
+    "schema": "public",
+    "name": "reserve_org_quota"
+  },
+  "configuration": {
+    "exposed_as": "mutation"
+  }
+}

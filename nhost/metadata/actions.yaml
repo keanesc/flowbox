@@ -1,0 +1,145 @@
+{
+  "actions": [
+    {
+      "name": "triggerWorkflowRun",
+      "definition": {
+        "kind": "synchronous",
+        "handler": "{{NHOST_FUNCTIONS_URL}}/triggerWorkflowRun",
+        "headers": [
+          {
+            "name": "x-relay-action-secret",
+            "value_from_env": "RELAY_ACTION_SECRET"
+          }
+        ],
+        "type": "mutation",
+        "arguments": [
+          {
+            "name": "workflow_id",
+            "type": "uuid!"
+          },
+          {
+            "name": "trigger_context",
+            "type": "jsonb"
+          }
+        ],
+        "output_type": "TriggerWorkflowRunOutput!"
+      },
+      "permissions": [
+        {
+          "role": "user"
+        }
+      ]
+    },
+    {
+      "name": "approveStep",
+      "definition": {
+        "kind": "synchronous",
+        "handler": "{{NHOST_FUNCTIONS_URL}}/approveStep",
+        "headers": [
+          {
+            "name": "x-relay-action-secret",
+            "value_from_env": "RELAY_ACTION_SECRET"
+          }
+        ],
+        "type": "mutation",
+        "arguments": [
+          {
+            "name": "workflow_run_id",
+            "type": "uuid!"
+          },
+          {
+            "name": "step_run_id",
+            "type": "uuid!"
+          },
+          {
+            "name": "decision",
+            "type": "String!"
+          }
+        ],
+        "output_type": "TriggerWorkflowRunOutput!"
+      },
+      "permissions": [
+        {
+          "role": "user"
+        }
+      ]
+    },
+    {
+      "name": "webhookStartWorkflow",
+      "definition": {
+        "kind": "synchronous",
+        "handler": "{{NHOST_FUNCTIONS_URL}}/webhookStartWorkflow",
+        "type": "mutation",
+        "arguments": [
+          {
+            "name": "public_id",
+            "type": "String!"
+          },
+          {
+            "name": "payload",
+            "type": "jsonb"
+          }
+        ],
+        "output_type": "TriggerWorkflowRunOutput!"
+      }
+    },
+    {
+      "name": "saveWorkflow",
+      "definition": {
+        "kind": "synchronous",
+        "handler": "{{NHOST_FUNCTIONS_URL}}/saveWorkflow",
+        "headers": [
+          {
+            "name": "x-relay-action-secret",
+            "value_from_env": "RELAY_ACTION_SECRET"
+          }
+        ],
+        "type": "mutation",
+        "arguments": [
+          {
+            "name": "workflow",
+            "type": "jsonb!"
+          }
+        ],
+        "output_type": "SaveWorkflowOutput!"
+      },
+      "permissions": [
+        {
+          "role": "user"
+        }
+      ]
+    }
+  ],
+  "custom_types": {
+    "objects": [
+      {
+        "name": "TriggerWorkflowRunOutput",
+        "fields": [
+          {
+            "name": "run_id",
+            "type": {
+              "named_type": "uuid"
+            }
+          },
+          {
+            "name": "status",
+            "type": {
+              "named_type": "String"
+            }
+          }
+        ]
+      },
+      {
+        "name": "SaveWorkflowOutput",
+        "fields": [
+          {
+            "name": "workflow_id",
+            "type": {
+              "named_type": "uuid"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

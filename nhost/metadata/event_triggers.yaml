@@ -1,0 +1,24 @@
+[
+  {
+    "name": "watched-orders-workflow",
+    "table": {
+      "schema": "public",
+      "name": "watched_orders"
+    },
+    "webhook": "{{NHOST_FUNCTIONS_URL}}/databaseEventStart",
+    "headers": [
+      {
+        "name": "x-relay-action-secret",
+        "value_from_env": "RELAY_ACTION_SECRET"
+      }
+    ],
+    "insert": true,
+    "update": true,
+    "delete": false,
+    "retry_conf": {
+      "num_retries": 3,
+      "interval_sec": 10,
+      "timeout_sec": 60
+    }
+  }
+]

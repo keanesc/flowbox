@@ -1,0 +1,14 @@
+[
+  {
+    "name": "workflow-scheduler",
+    "webhook": "{{NHOST_FUNCTIONS_URL}}/scheduledWorkflowStart",
+    "schedule": "* * * * *",
+    "payload": {},
+    "headers": [
+      {
+        "name": "x-relay-action-secret",
+        "value_from_env": "RELAY_ACTION_SECRET"
+      }
+    ]
+  }
+]

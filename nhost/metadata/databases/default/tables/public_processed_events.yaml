@@ -1,0 +1,7 @@
+{
+  "table": {
+    "schema": "public",
+    "name": "processed_events"
+  },
+  "select_permissions": []
+}
