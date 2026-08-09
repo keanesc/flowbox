@@ -3,9 +3,10 @@
 This is the deployable Hasura CLI v3 layout. `databases/default/tables` contains
 one tracked-table/view definition per file; the pre-existing `auth` definitions
 were exported from production and retained, while Relay Room's `public`
-definitions replace the incomplete production versions. `actions.yaml`,
-`cron_triggers.yaml`, and `event_triggers.yaml` contain the Relay Room Action
-and trigger configuration.
+definitions replace the incomplete production versions. `actions.yaml` and
+`cron_triggers.yaml` contain the Relay Room Action and scheduled-trigger
+configuration. The database event trigger is attached to the
+`public_watched_orders` table definition, as required by Hasura metadata v3.
 
 The `organization_monthly_usage` permission deliberately correlates its
 membership lookup with the outer view row using `_ceq: ["$", "org_id"]`, and

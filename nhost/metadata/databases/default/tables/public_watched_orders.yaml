@@ -54,5 +54,20 @@
         }
       }
     }
+  ],
+  "event_triggers": [
+    {
+      "name": "watched-orders-workflow",
+      "definition": {
+        "enable_manual": false,
+        "insert": {"columns": "*"},
+        "update": {"columns": "*"}
+      },
+      "webhook": "{{NHOST_FUNCTIONS_URL}}/databaseEventStart",
+      "headers": [
+        {"name": "x-relay-action-secret", "value_from_env": "RELAY_ACTION_SECRET"}
+      ],
+      "retry_conf": {"num_retries": 3, "interval_sec": 10, "timeout_sec": 60}
+    }
   ]
 }

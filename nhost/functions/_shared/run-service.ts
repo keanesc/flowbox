@@ -68,8 +68,8 @@ export async function startRun(workflowId: string, triggerType: string, triggerI
   if (!workflow.active) throw new Error("WORKFLOW_INACTIVE");
   const errors = validateWorkflow(workflow);
   if (errors.length) throw new Error(`INVALID_WORKFLOW: ${errors.join(" ")}`);
-  const reserved = await graphql<{ reserve_org_quota: Array<{ allowed: boolean }> }>(`mutation Reserve($orgId: uuid!) { reserve_org_quota(args: {p_org_id: $orgId}) { allowed } }`, { orgId: workflow.orgId }, adminHeaders());
-  if (!reserved.reserve_org_quota[0]?.allowed) throw new Error("QUOTA_EXHAUSTED");
+  const reserved = await graphql<{ reserve_org_quota: Array<{ id: string }> }>(`mutation Reserve($orgId: uuid!) { reserve_org_quota(args: {p_org_id: $orgId}) { id } }`, { orgId: workflow.orgId }, adminHeaders());
+  if (!reserved.reserve_org_quota[0]) throw new Error("QUOTA_EXHAUSTED");
   const run = await graphql<{ insert_workflow_runs_one: { id: string } }>(`mutation CreateRun($input: workflow_runs_insert_input!) { insert_workflow_runs_one(object: $input) { id } }`, { input: { workflow_id: workflow.id, trigger_type: triggerType, status: "running", trigger_input: triggerInput, initiated_by: session.userId } }, adminHeaders());
   const runId = run.insert_workflow_runs_one.id;
   await graphql(`mutation Steps($steps: [step_runs_insert_input!]!) { insert_step_runs(objects: $steps) { affected_rows } }`, { steps: workflow.steps.map((step) => ({ workflow_run_id: runId, workflow_step_id: step.id, status: "pending" })) }, adminHeaders());
