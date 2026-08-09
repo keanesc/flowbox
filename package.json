@@ -1,0 +1,19 @@
+{
+  "name": "relayroom-workflow-builder",
+  "private": true,
+  "packageManager": "pnpm@11.3.0",
+  "scripts": {
+    "dev": "pnpm --filter @relayroom/web dev",
+    "build": "pnpm --filter @relayroom/web build",
+    "lint": "pnpm --filter @relayroom/web lint",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
