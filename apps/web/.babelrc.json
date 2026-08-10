@@ -2,6 +2,9 @@
   "presets": ["next/babel"],
   "plugins": [
     "@atlaskit/tokens/babel-plugin",
-    ["@compiled/babel-plugin", { "extract": false }]
+    [
+      "@compiled/babel-plugin",
+      { "extract": false, "importSources": ["@atlaskit/css"] }
+    ]
   ]
 }
