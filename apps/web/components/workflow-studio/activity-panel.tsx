@@ -13,7 +13,7 @@ export default function ActivityPanel({
   hasSelectedRun: boolean;
 }) {
   return (
-    <Box xcss={styles.panel} padding="space.400" aria-live="polite">
+    <div className={styles.panel} aria-live="polite">
       <Stack space="space.300">
         <Stack space="space.050">
           <Text size="small" color="color.text.subtle">
@@ -62,6 +62,6 @@ export default function ActivityPanel({
           </Text>
         )}
       </Stack>
-    </Box>
+    </div>
   );
 }

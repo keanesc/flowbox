@@ -1,11 +1,4 @@
-import { cx } from "@atlaskit/css";
-import {
-  Box,
-  Pressable,
-  Stack,
-  Inline,
-  Text,
-} from "@atlaskit/primitives/compiled";
+import { Stack, Inline, Text } from "@atlaskit/primitives/compiled";
 import { styles } from "./ui-styles";
 import { StatusLozenge } from "./status-lozenge";
 import type { Step, Status, TypeMeta } from "./types";
@@ -28,15 +21,16 @@ export default function StepListItem({
   const Icon = meta.icon;
   const summary = meta.summary(step);
   return (
-    <Pressable
-      xcss={cx(styles.stepRow, selected && styles.stepRowSelected)}
+    <button
+      type="button"
+      className={`${styles.stepRow} ${selected ? styles.stepRowSelected : ""}`}
       onClick={onSelect}
       aria-current={selected ? "step" : undefined}
       aria-label={`Step ${index + 1}: ${String(step.config.title ?? meta.label)}`}
     >
-      <Box as="span" xcss={styles.stepIcon}>
+      <span className={styles.stepIcon}>
         <Icon label="" />
-      </Box>
+      </span>
       <Stack space="space.050" grow="fill">
         <Inline alignBlock="center" space="space.100" spread="space-between">
           <Text size="small" color="color.text.subtle">
@@ -49,6 +43,6 @@ export default function StepListItem({
           {summary}
         </Text>
       </Stack>
-    </Pressable>
+    </button>
   );
 }

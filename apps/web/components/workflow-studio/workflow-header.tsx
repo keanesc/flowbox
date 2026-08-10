@@ -62,60 +62,62 @@ export default function WorkflowHeader({
     </ButtonGroup>
   );
   return (
-    <Stack xcss={styles.header} space="space.300">
-      <PageHeader breadcrumbs={breadcrumbs} actions={actions}>
-        {canEdit ? (
-          <Stack space="space.100">
-            <TextField
-              value={workflow.name}
-              onChange={(event) =>
-                onChange({ name: (event.target as HTMLInputElement).value })
-              }
-              aria-label="Workflow name"
-              appearance="subtle"
+    <div className={styles.header}>
+      <Stack space="space.300">
+        <PageHeader breadcrumbs={breadcrumbs} actions={actions}>
+          {canEdit ? (
+            <Stack space="space.100">
+              <TextField
+                value={workflow.name}
+                onChange={(event) =>
+                  onChange({ name: (event.target as HTMLInputElement).value })
+                }
+                aria-label="Workflow name"
+                appearance="subtle"
+              />
+              <Textarea
+                value={workflow.description}
+                onChange={(event) =>
+                  onChange({ description: event.target.value })
+                }
+                aria-label="Workflow description"
+                resize="auto"
+              />
+            </Stack>
+          ) : (
+            <Stack space="space.100">
+              <Text as="span" size="small" color="color.text.subtle">
+                {workflow.active ? "Active workflow" : "Draft workflow"} ·{" "}
+                {role} access
+              </Text>
+              <Text as="p" color="color.text.subtle">
+                {workflow.description}
+              </Text>
+            </Stack>
+          )}
+        </PageHeader>
+        <Inline alignBlock="end" space="space.300" shouldWrap>
+          <Box>
+            <label htmlFor="workflow-select">
+              <Text as="span" size="small" color="color.text.subtle">
+                Workflow
+              </Text>
+            </label>
+            <Select<WorkflowOption>
+              inputId="workflow-select"
+              value={{ label: workflow.name, value: workflow.id }}
+              options={workflows.map((item) => ({
+                label: item.name,
+                value: item.id,
+              }))}
+              onChange={(option) => option && onWorkflowChange(option.value)}
             />
-            <Textarea
-              value={workflow.description}
-              onChange={(event) =>
-                onChange({ description: event.target.value })
-              }
-              aria-label="Workflow description"
-              resize="auto"
-            />
-          </Stack>
-        ) : (
-          <Stack space="space.100">
-            <Text as="span" size="small" color="color.text.subtle">
-              {workflow.active ? "Active workflow" : "Draft workflow"} · {role}{" "}
-              access
-            </Text>
-            <Text as="p" color="color.text.subtle">
-              {workflow.description}
-            </Text>
-          </Stack>
-        )}
-      </PageHeader>
-      <Inline alignBlock="end" space="space.300" shouldWrap>
-        <Box>
-          <label htmlFor="workflow-select">
-            <Text as="span" size="small" color="color.text.subtle">
-              Workflow
-            </Text>
-          </label>
-          <Select<WorkflowOption>
-            inputId="workflow-select"
-            value={{ label: workflow.name, value: workflow.id }}
-            options={workflows.map((item) => ({
-              label: item.name,
-              value: item.id,
-            }))}
-            onChange={(option) => option && onWorkflowChange(option.value)}
-          />
-        </Box>
-        <Text size="small" color="color.text.subtle">
-          Organization-scoped · {role}
-        </Text>
-      </Inline>
-    </Stack>
+          </Box>
+          <Text size="small" color="color.text.subtle">
+            Organization-scoped · {role}
+          </Text>
+        </Inline>
+      </Stack>
+    </div>
   );
 }

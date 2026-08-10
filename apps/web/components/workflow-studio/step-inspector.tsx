@@ -47,13 +47,13 @@ export default function StepInspector({
 }) {
   if (!step || !meta) {
     return (
-      <Box xcss={styles.panel} padding="space.400">
+      <div className={styles.panel}>
         <Text color="color.text.subtle">Choose a step to configure it.</Text>
-      </Box>
+      </div>
     );
   }
   return (
-    <Box as="aside" xcss={styles.panel} padding="space.400">
+    <aside className={styles.panel}>
       <Stack space="space.300">
         <Inline alignBlock="center" spread="space-between">
           <Stack space="space.050">
@@ -77,13 +77,13 @@ export default function StepInspector({
         {stepRun?.output && (
           <details>
             <summary>Run output</summary>
-            <Box xcss={styles.fieldSurface}>
+            <div className={styles.fieldSurface}>
               <CodeBlock
                 language="json"
                 showLineNumbers={false}
                 text={JSON.stringify(stepRun.output, null, 2)}
               />
-            </Box>
+            </div>
           </details>
         )}
         {role !== "viewer" && (
@@ -118,6 +118,6 @@ export default function StepInspector({
           </Stack>
         )}
       </Stack>
-    </Box>
+    </aside>
   );
 }

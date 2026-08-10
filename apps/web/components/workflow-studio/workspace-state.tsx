@@ -20,19 +20,19 @@ export function WorkspaceState({
 }) {
   if (kind === "loading") {
     return (
-      <Box xcss={styles.auth}>
+      <div className={styles.auth}>
         <Stack space="space.200" alignInline="start">
           <Skeleton width="16rem" height="2rem" isShimmering />
           <Skeleton width="24rem" height="1rem" isShimmering />
           <Skeleton width="20rem" height="1rem" isShimmering />
         </Stack>
-      </Box>
+      </div>
     );
   }
   if (kind === "unavailable") {
     return (
-      <Box xcss={styles.auth}>
-        <Box xcss={styles.authCard}>
+      <div className={styles.auth}>
+        <div className={styles.authCard}>
           <Stack space="space.300">
             <Feedback title="Workspace unavailable">
               {message ?? "Organization data is unavailable."}
@@ -41,12 +41,12 @@ export function WorkspaceState({
               Try again
             </Button>
           </Stack>
-        </Box>
-      </Box>
+        </div>
+      </div>
     );
   }
   return (
-    <Box xcss={styles.auth}>
+    <div className={styles.auth}>
       <EmptyState
         header="No workflow yet"
         description={
@@ -62,6 +62,6 @@ export function WorkspaceState({
           ) : undefined
         }
       />
-    </Box>
+    </div>
   );
 }

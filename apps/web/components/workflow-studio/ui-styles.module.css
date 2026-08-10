@@ -1,0 +1,126 @@
+.shell {
+  display: grid;
+  grid-template-columns: 16rem minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: var(--ds-space-300);
+  background-color: var(--ds-surface);
+  border-inline-end: var(--ds-border-width) solid var(--ds-border);
+}
+
+.main {
+  min-width: 0;
+}
+
+.mainInner {
+  max-width: 90rem;
+  margin-inline: auto;
+  padding-block: var(--ds-space-400);
+  padding-inline: var(--ds-space-500);
+}
+
+.auth {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: var(--ds-space-500);
+  background-color: var(--ds-background-neutral);
+}
+
+.authCard {
+  width: min(32rem, 100%);
+  padding: var(--ds-space-500);
+  background-color: var(--ds-surface-raised);
+  border: var(--ds-border-width) solid var(--ds-border);
+  border-radius: var(--ds-radius-large);
+}
+
+.panel {
+  padding: var(--ds-space-400);
+  background-color: var(--ds-surface-raised);
+  border: var(--ds-border-width) solid var(--ds-border);
+  border-radius: var(--ds-radius-medium);
+}
+
+.header {
+  padding-block-end: var(--ds-space-300);
+  border-block-end: var(--ds-border-width) solid var(--ds-border);
+}
+
+.builderGrid,
+.bottomGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(20rem, 0.8fr);
+  gap: var(--ds-space-300);
+}
+
+.runSummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--ds-space-400);
+  background-color: var(--ds-background-information);
+  border: var(--ds-border-width) solid var(--ds-border-information);
+  border-radius: var(--ds-radius-medium);
+}
+
+.stepRow {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  gap: var(--ds-space-200);
+  padding-block: var(--ds-space-150);
+  padding-inline: var(--ds-space-200);
+  text-align: start;
+  background-color: var(--ds-surface-raised);
+  border: var(--ds-border-width) solid var(--ds-border);
+  border-radius: var(--ds-radius-medium);
+  cursor: pointer;
+}
+
+.stepRow:hover {
+  background-color: var(--ds-background-neutral-hovered);
+}
+
+.stepRowSelected {
+  background-color: var(--ds-background-selected);
+  border-color: var(--ds-border-selected);
+}
+
+.stepIcon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  padding: var(--ds-space-100);
+  color: var(--ds-text-brand);
+  background-color: var(--ds-background-brand-subtlest);
+  border-radius: var(--ds-radius-small);
+}
+
+.fieldSurface {
+  padding: var(--ds-space-300);
+  background-color: var(--ds-background-neutral);
+  border-radius: var(--ds-radius-medium);
+}
+
+.footer {
+  margin-block-start: auto;
+  padding-block-start: var(--ds-space-300);
+  border-block-start: var(--ds-border-width) solid var(--ds-border);
+}
+
+@media (max-width: 64rem) {
+  .shell {
+    grid-template-columns: 14rem minmax(0, 1fr);
+  }
+
+  .builderGrid,
+  .bottomGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

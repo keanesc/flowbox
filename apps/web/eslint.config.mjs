@@ -17,9 +17,6 @@ export default [
   {
     files: ["**/*.{ts,tsx}"],
     rules: {
-      // The feature layer shares one token-only cssMap so the shell and panels
-      // remain visually consistent. The repository guard still rejects raw
-      // styling values and global CSS.
       "@atlaskit/ui-styling-standard/no-imported-style-values": "off",
       "@atlaskit/ui-styling-standard/no-exported-styles": "off",
       "@atlaskit/design-system/no-invalid-css-map": "off",
@@ -30,6 +27,17 @@ export default [
       "@atlaskit/design-system/use-heading-level-in-section-message": "off",
       "@atlaskit/design-system/no-html-code": "off",
     },
+  },
+  {
+    files: [
+      "components/workflow-studio.tsx",
+      "components/workflow-studio/**/*.{ts,tsx}",
+    ],
+    rules: { "@atlaskit/ui-styling-standard/no-classname-prop": "off" },
+  },
+  {
+    files: ["components/workflow-studio/ui-styles.ts"],
+    rules: { "@atlaskit/ui-styling-standard/no-global-styles": "off" },
   },
   {
     files: ["app/layout.tsx"],

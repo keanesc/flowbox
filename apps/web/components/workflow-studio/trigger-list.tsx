@@ -30,7 +30,7 @@ export default function TriggerList({
 }) {
   const isOwner = role === "owner";
   return (
-    <Box xcss={styles.panel} padding="space.400">
+    <div className={styles.panel}>
       <Stack space="space.300">
         <Inline alignBlock="center" spread="space-between">
           <Stack space="space.050">
@@ -134,6 +134,6 @@ export default function TriggerList({
           </Text>
         )}
       </Stack>
-    </Box>
+    </div>
   );
 }

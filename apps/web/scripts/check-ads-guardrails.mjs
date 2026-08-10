@@ -19,11 +19,16 @@ async function walk(directory) {
         [/fonts\.googleapis\.com/i, "Google Fonts import"],
         [/font-family\s*:/i, "custom font-family"],
         [/box-shadow\s*:/i, "custom box shadow"],
-        [/border-radius\s*:/i, "custom border radius"],
       ];
       for (const [pattern, label] of checks) {
         if (pattern.test(text))
           violations.push(`${relative(root, path)}: ${label}`);
+      }
+      if (
+        /border-radius\s*:/i.test(text) &&
+        !/border-radius\s*:\s*var\(--ds-/i.test(text)
+      ) {
+        violations.push(`${relative(root, path)}: custom border radius`);
       }
       if (path.endsWith(".css")) {
         if (

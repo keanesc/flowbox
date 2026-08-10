@@ -547,13 +547,13 @@ export default function WorkflowStudio() {
   if (!workflow)
     return (
       <WorkspaceShell {...shellProps}>
-        <Box xcss={styles.mainInner}>
+        <div className={styles.mainInner}>
           <WorkspaceState
             kind="empty"
             canCreate={canEdit}
             onCreate={addWorkflow}
           />
-        </Box>
+        </div>
       </WorkspaceShell>
     );
 
@@ -566,7 +566,7 @@ export default function WorkflowStudio() {
     : 0;
   return (
     <WorkspaceShell {...shellProps}>
-      <Box xcss={styles.mainInner}>
+      <div className={styles.mainInner}>
         <Stack space="space.400">
           <WorkflowHeader
             workflow={workflow}
@@ -618,7 +618,7 @@ export default function WorkflowStudio() {
             />
           ) : (
             <Stack space="space.300">
-              <Box xcss={styles.runSummary}>
+              <div className={styles.runSummary}>
                 <Stack space="space.100">
                   <Text size="small" color="color.text.subtle">
                     {selectedRun
@@ -649,8 +649,8 @@ export default function WorkflowStudio() {
                     />
                   </Box>
                 </Stack>
-              </Box>
-              <Box xcss={styles.builderGrid}>
+              </div>
+              <div className={styles.builderGrid}>
                 <StepList
                   steps={steps}
                   selectedStepId={selectedStep?.id}
@@ -687,8 +687,8 @@ export default function WorkflowStudio() {
                   onRemove={() => selectedStep && removeStep(selectedStep.id)}
                   onApprove={() => void approve()}
                 />
-              </Box>
-              <Box xcss={styles.bottomGrid}>
+              </div>
+              <div className={styles.bottomGrid}>
                 <TriggerList
                   triggers={workflow.workflow_triggers}
                   role={memberRole}
@@ -731,11 +731,11 @@ export default function WorkflowStudio() {
                   stepRuns={stepRuns}
                   hasSelectedRun={Boolean(selectedRun)}
                 />
-              </Box>
+              </div>
             </Stack>
           )}
         </Stack>
-      </Box>
+      </div>
       {toast && (
         <FlagGroup label="Workflow notifications">
           <AutoDismissFlag

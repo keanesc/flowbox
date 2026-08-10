@@ -25,8 +25,8 @@ export function FeedbackStack({ children }: { children: React.ReactNode }) {
 export function TransientFeedback({ message }: { message: string }) {
   if (!message) return null;
   return (
-    <Box xcss={styles.fieldSurface} role="status">
+    <div className={styles.fieldSurface} role="status">
       <SectionMessage appearance="success">{message}</SectionMessage>
-    </Box>
+    </div>
   );
 }

@@ -33,7 +33,7 @@ export default function StepList({
     value: type,
   }));
   return (
-    <Box xcss={styles.panel} padding="space.400">
+    <div className={styles.panel}>
       <Stack space="space.300">
         <Inline alignBlock="center" spread="space-between">
           <Stack space="space.050">
@@ -74,6 +74,6 @@ export default function StepList({
           />
         )}
       </Stack>
-    </Box>
+    </div>
   );
 }

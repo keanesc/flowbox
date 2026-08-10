@@ -23,16 +23,16 @@ export default function RunHistory({
 }) {
   if (!runs.length) {
     return (
-      <Box xcss={styles.panel} padding="space.500">
+      <div className={styles.panel}>
         <EmptyState
           header="No runs yet"
           description="Run this workflow to create the first execution."
         />
-      </Box>
+      </div>
     );
   }
   return (
-    <Box xcss={styles.panel} padding="space.400">
+    <div className={styles.panel}>
       <Stack space="space.300">
         <Stack space="space.050">
           <Text size="small" color="color.text.subtle">
@@ -88,6 +88,6 @@ export default function RunHistory({
           isFixedSize
         />
       </Stack>
-    </Box>
+    </div>
   );
 }

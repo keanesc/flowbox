@@ -25,8 +25,8 @@ export default function SignInScreen({
   onSubmit: (values: SignInValues) => void;
 }) {
   return (
-    <Box xcss={styles.auth}>
-      <Box xcss={styles.authCard}>
+    <div className={styles.auth}>
+      <div className={styles.authCard}>
         <Stack space="space.300">
           <RelayRoomLogo />
           <Stack space="space.100">
@@ -103,7 +103,7 @@ export default function SignInScreen({
             )}
           </Form>
         </Stack>
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 }
