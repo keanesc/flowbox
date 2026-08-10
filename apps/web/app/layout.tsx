@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "@atlaskit/css-reset";
 import "./globals.css";
 import Providers from "../components/providers";
 
@@ -11,7 +12,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-color-mode="light" data-theme="light">
       <body>
         <Providers>{children}</Providers>
       </body>

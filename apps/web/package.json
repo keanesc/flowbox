@@ -4,14 +4,51 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "lint": "next lint"
+    "lint": "pnpm guard:ads && eslint .",
+    "guard:ads": "node scripts/check-ads-guardrails.mjs"
   },
   "dependencies": {
+    "@atlaskit/avatar": "^27.0.0",
+    "@atlaskit/breadcrumbs": "^17.5.8",
+    "@atlaskit/button": "^25.0.3",
+    "@atlaskit/code": "^18.2.2",
+    "@atlaskit/css": "^1.0.2",
+    "@atlaskit/css-reset": "^8.1.2",
+    "@atlaskit/dropdown-menu": "^18.0.1",
+    "@atlaskit/dynamic-table": "^19.1.5",
+    "@atlaskit/empty-state": "^12.0.0",
+    "@atlaskit/flag": "^18.2.12",
+    "@atlaskit/form": "^16.1.5",
+    "@atlaskit/heading": "^7.0.1",
+    "@atlaskit/icon": "^37.3.0",
+    "@atlaskit/link": "^5.0.0",
+    "@atlaskit/lozenge": "^15.0.2",
+    "@atlaskit/menu": "^10.0.0",
+    "@atlaskit/page-header": "^13.1.3",
+    "@atlaskit/primitives": "^22.2.1",
+    "@atlaskit/progress-bar": "^5.1.1",
+    "@atlaskit/section-message": "^10.0.0",
+    "@atlaskit/select": "^22.6.5",
+    "@atlaskit/skeleton": "^4.2.2",
+    "@atlaskit/spinner": "^20.1.2",
+    "@atlaskit/textarea": "^9.1.5",
+    "@atlaskit/textfield": "^10.0.1",
+    "@atlaskit/tokens": "^16.5.0",
     "@nhost/nextjs": "^2.2.1",
     "@nhost/react": "^3.1.1",
     "graphql": "^16.10.0",
     "next": "^15.1.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@atlaskit/eslint-plugin-design-system": "^16.10.0",
+    "@atlaskit/eslint-plugin-ui-styling-standard": "^2.1.2",
+    "@compiled/babel-plugin": "^2.0.0",
+    "@compiled/webpack-loader": "^1.1.0",
+    "@eslint/eslintrc": "^3.3.6",
+    "@typescript-eslint/parser": "^8.66.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^15.5.23"
   }
 }
