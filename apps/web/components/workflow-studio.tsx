@@ -8,99 +8,83 @@ import {
   useSignOut,
   useUserData,
 } from "@nhost/nextjs";
+import { AutoDismissFlag, FlagGroup } from "@atlaskit/flag";
+import CheckIcon from "@atlaskit/icon/core/check-mark";
+import Heading from "@atlaskit/heading";
+import ProgressBar from "@atlaskit/progress-bar";
+import { Box, Stack, Text } from "@atlaskit/primitives/compiled";
 import {
   APPROVE_STEP_MUTATION,
   STEP_RUNS_SUBSCRIPTION,
   TRIGGER_WORKFLOW_MUTATION,
   WORKSPACE_QUERY,
 } from "../lib/graphql";
-
-type Status =
-  | "pending"
-  | "running"
-  | "completed"
-  | "failed"
-  | "paused"
-  | "skipped";
-type StepType =
-  | "llm_call"
-  | "http_request"
-  | "conditional_branch"
-  | "approval_gate"
-  | "db_write"
-  | "notify";
-type TriggerType = "manual" | "webhook" | "scheduled" | "database_event";
-type Role = "owner" | "editor" | "viewer";
-type Step = {
-  id: string;
-  position: number;
-  type: StepType;
-  config: Record<string, unknown>;
-  status?: Status;
-};
-type Trigger = {
-  id: string;
-  type: TriggerType;
-  config: Record<string, unknown>;
-  enabled: boolean;
-};
-type Run = {
-  id: string;
-  status: Status;
-  trigger_type: string;
-  started_at: string;
-  completed_at: string | null;
-  error: Record<string, unknown> | null;
-};
-type Workflow = {
-  id: string;
-  name: string;
-  description: string;
-  active: boolean;
-  workflow_steps: Step[];
-  workflow_triggers: Trigger[];
-  workflow_runs: Run[];
-};
-type Workspace = {
-  organizations_by_pk: {
-    id: string;
-    name: string;
-    quota_used: number;
-    quota_limit: number;
-  } | null;
-  workflows: Workflow[];
-};
-type StepRun = {
-  id: string;
-  workflow_run_id: string;
-  workflow_step_id: string;
-  status: Status;
-  output: Record<string, unknown> | null;
-  error: Record<string, unknown> | null;
-  attempt_count: number;
-  approved_by: string | null;
-  approved_at: string | null;
-  started_at: string | null;
-  completed_at: string | null;
-};
+import ActivityPanel from "./workflow-studio/activity-panel";
+import { Feedback } from "./workflow-studio/feedback";
+import RunHistory from "./workflow-studio/run-history";
+import SignInScreen from "./workflow-studio/sign-in-screen";
+import StepInspector from "./workflow-studio/step-inspector";
+import StepList from "./workflow-studio/step-list";
+import TriggerList from "./workflow-studio/trigger-list";
+import type {
+  Organization,
+  Role,
+  Step,
+  StepRun,
+  StepType,
+  Status,
+  TypeMeta,
+  Workflow,
+} from "./workflow-studio/types";
+import { styles } from "./workflow-studio/ui-styles";
+import WorkflowHeader from "./workflow-studio/workflow-header";
+import WorkflowTabs from "./workflow-studio/workflow-tabs";
+import WorkspaceShell from "./workflow-studio/workspace-shell";
+import { WorkspaceState } from "./workflow-studio/workspace-state";
+import AiSparkleIcon from "@atlaskit/icon/core/ai-sparkle";
+import ApiIcon from "@atlaskit/icon/core/api";
+import BranchIcon from "@atlaskit/icon/core/branch";
+import ClockIcon from "@atlaskit/icon/core/clock";
+import DatabaseIcon from "@atlaskit/icon/core/database";
+import SendIcon from "@atlaskit/icon/core/send";
 
 const ORG_QUERY = `query Organizations { org_members { org_id role organization { id name quota_used quota_limit } } }`;
 const SAVE_WORKFLOW_MUTATION = `mutation SaveWorkflow($workflow: jsonb!) { saveWorkflow(workflow: $workflow) { workflow_id } }`;
-const typeMeta: Record<
-  StepType,
-  { icon: string; label: string; tone: string }
-> = {
-  llm_call: { icon: "✦", label: "LLM call", tone: "mint" },
-  http_request: { icon: "↗", label: "HTTP request", tone: "blue" },
-  conditional_branch: {
-    icon: "◇",
-    label: "Conditional branch",
-    tone: "violet",
+
+const typeMeta: Record<StepType, TypeMeta> = {
+  llm_call: {
+    label: "LLM call",
+    icon: AiSparkleIcon,
+    summary: (step) => String(step.config.prompt ?? "Configured model call"),
   },
-  approval_gate: { icon: "⌁", label: "Approval gate", tone: "coral" },
-  db_write: { icon: "▣", label: "Database write", tone: "blue" },
-  notify: { icon: "◌", label: "Notify", tone: "violet" },
+  http_request: {
+    label: "HTTP request",
+    icon: ApiIcon,
+    summary: (step) =>
+      `${String(step.config.method ?? "GET")} · ${String(step.config.url ?? "")}`,
+  },
+  conditional_branch: {
+    label: "Conditional branch",
+    icon: BranchIcon,
+    summary: (step) => String(step.config.expression ?? "Configured condition"),
+  },
+  approval_gate: {
+    label: "Approval gate",
+    icon: ClockIcon,
+    summary: (step) => String(step.config.reason ?? "Requires approval"),
+  },
+  db_write: {
+    label: "Database write",
+    icon: DatabaseIcon,
+    summary: (step) => String(step.config.target ?? "workflow_results"),
+  },
+  notify: {
+    label: "Notify",
+    icon: SendIcon,
+    summary: (step) => String(step.config.message ?? "Configured notification"),
+  },
 };
+
 const baseConfig: Record<StepType, Record<string, unknown>> = {
   llm_call: {
     title: "Classify input",
@@ -129,6 +113,7 @@ const baseConfig: Record<StepType, Record<string, unknown>> = {
     message: "Workflow requires attention",
   },
 };
+
 const messageOf = (value: unknown) =>
   Array.isArray(value)
     ? value
@@ -141,180 +126,11 @@ const messageOf = (value: unknown) =>
       );
 const localId = () => `new-${Math.random().toString(36).slice(2)}`;
 const formatTime = (value: string) => new Date(value).toLocaleString();
-const duration = (run: Run) =>
-  run.completed_at
-    ? `${Math.max(0, Math.round((new Date(run.completed_at).getTime() - new Date(run.started_at).getTime()) / 1000))}s`
-    : "—";
 
-function SignIn() {
-  const { signInEmailPassword, isLoading, error } = useSignInEmailPassword();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  return (
-    <main className="auth-shell">
-      <div className="auth-card">
-        <div className="brand auth-brand">
-          <div className="brand-mark">
-            <span />
-            <span />
-            <span />
-          </div>
-          <span>
-            relay<span className="brand-soft">room</span>
-          </span>
-        </div>
-        <span className="section-kicker">SECURE WORKSPACE</span>
-        <h1>Sign in to your control room.</h1>
-        <p>
-          Use your Relay Room account to access organization-scoped workflows
-          and run history.
-        </p>
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            void signInEmailPassword(email, password);
-          }}
-        >
-          <label>
-            Email
-            <input
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-            />
-          </label>
-          <label>
-            Password
-            <input
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-            />
-          </label>
-          {error && <div className="inline-error">{messageOf(error)}</div>}
-          <button className="run-button auth-submit" disabled={isLoading}>
-            {isLoading ? "Signing in…" : "Sign in"}
-          </button>
-        </form>
-      </div>
-    </main>
-  );
-}
-
-function StatusPill({ status }: { status: Status }) {
-  return (
-    <span className={`status status-${status}`}>
-      <span className="status-dot" />
-      {status === "paused" ? "Awaiting approval" : status}
-    </span>
-  );
-}
-
-function StepFields({
-  step,
-  onChange,
-  readOnly,
-}: {
-  step: Step;
-  onChange: (config: Record<string, unknown>) => void;
-  readOnly: boolean;
-}) {
-  const update = (key: string, value: string) =>
-    onChange({ ...step.config, [key]: value });
-  const input = (label: string, key: string, multiline = false) => (
-    <label className="field-label">
-      {label}
-      {multiline ? (
-        <textarea
-          className="code-field"
-          disabled={readOnly}
-          value={String(step.config[key] ?? "")}
-          onChange={(e) => update(key, e.target.value)}
-        />
-      ) : (
-        <input
-          className="text-field"
-          disabled={readOnly}
-          value={String(step.config[key] ?? "")}
-          onChange={(e) => update(key, e.target.value)}
-        />
-      )}
-    </label>
-  );
-  if (step.type === "llm_call")
-    return (
-      <>
-        {input("Title", "title")}
-        {input("Prompt", "prompt", true)}
-        {input("Model", "model")}
-      </>
-    );
-  if (step.type === "http_request")
-    return (
-      <>
-        {input("Title", "title")}
-        <label className="field-label">
-          Method
-          <select
-            className="text-field"
-            disabled={readOnly}
-            value={String(step.config.method ?? "GET")}
-            onChange={(e) => update("method", e.target.value)}
-          >
-            <option>GET</option>
-            <option>POST</option>
-            <option>PUT</option>
-            <option>PATCH</option>
-            <option>DELETE</option>
-          </select>
-        </label>
-        {input("HTTPS URL", "url")}
-        {input("JSON body (optional)", "body", true)}
-      </>
-    );
-  if (step.type === "conditional_branch")
-    return (
-      <>
-        {input("Title", "title")}
-        {input("Condition", "expression")}
-        <p className="field-help">
-          Example: <code>contains approve</code>. It is evaluated against the
-          previous step output.
-        </p>
-        {input("True outcome", "whenTrue")}
-        {input("False outcome", "whenFalse")}
-      </>
-    );
-  if (step.type === "approval_gate")
-    return (
-      <>
-        {input("Title", "title")}
-        {input("Approval message", "reason", true)}
-      </>
-    );
-  if (step.type === "db_write")
-    return (
-      <>
-        {input("Title", "title")}
-        <p className="field-help">
-          Results are written only to <code>workflow_results</code>.
-        </p>
-      </>
-    );
-  return (
-    <>
-      {input("Title", "title")}
-      {input("Message", "message", true)}
-      <p className="field-help">
-        Delivered through the approved Slack destination.
-      </p>
-    </>
-  );
-}
+type WorkspaceData = {
+  organizations_by_pk: Organization | null;
+  workflows: Workflow[];
+};
 
 function useWorkspace() {
   const nhost = useNhostClient();
@@ -329,9 +145,10 @@ function useWorkspace() {
       organization: { id: string; name: string };
     }>
   >([]);
-  const [data, setData] = useState<Workspace>();
+  const [data, setData] = useState<WorkspaceData>();
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(true);
+
   const load = async (requestedOrg = orgId) => {
     if (!isAuthenticated) return;
     try {
@@ -353,9 +170,10 @@ function useWorkspace() {
         throw new Error("No organization membership found for this account.");
       setOrgId(member.org_id);
       setRole(member.role);
-      const result = await nhost.graphql.request<Workspace>(WORKSPACE_QUERY, {
-        orgId: member.org_id,
-      });
+      const result = await nhost.graphql.request<WorkspaceData>(
+        WORKSPACE_QUERY,
+        { orgId: member.org_id },
+      );
       if (result.error) throw new Error(messageOf(result.error));
       setData(result.data ?? undefined);
     } catch (caught) {
@@ -386,10 +204,12 @@ function useWorkspace() {
 
 export default function WorkflowStudio() {
   const live = useWorkspace();
+  const {
+    signInEmailPassword,
+    isLoading: signInLoading,
+    error: signInError,
+  } = useSignInEmailPassword();
   const { signOut } = useSignOut();
-  // Nhost restores browser auth state after hydration. Keep the initial client
-  // render identical to the server response so the sign-in shell never causes
-  // a hydration replacement before an authenticated run is observed.
   const [hydrated, setHydrated] = useState(false);
   const [view, setView] = useState<"builder" | "runs">("builder");
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>();
@@ -407,6 +227,7 @@ export default function WorkflowStudio() {
   const [running, setRunning] = useState(false);
   const [saving, setSaving] = useState(false);
   const [approving, setApproving] = useState(false);
+
   useEffect(() => {
     setHydrated(true);
   }, []);
@@ -421,7 +242,7 @@ export default function WorkflowStudio() {
       !selectedWorkflowId ||
       !workflows.some((workflow) => workflow.id === selectedWorkflowId)
     )
-      setSelectedWorkflowId(workflows.at(0)?.id);
+      setSelectedWorkflowId(workflows[0]?.id);
   }, [workflows, selectedWorkflowId]);
   const serverWorkflow = workflows.find(
     (workflow) => workflow.id === selectedWorkflowId,
@@ -434,10 +255,10 @@ export default function WorkflowStudio() {
   }, [serverWorkflow?.id]);
   const memberRole = live.role ?? "viewer";
   const canEdit = memberRole !== "viewer";
-  const isOwner = memberRole === "owner";
   const selectedRun =
     workflow?.workflow_runs.find((run) => run.id === selectedRunId) ??
     workflow?.workflow_runs[0];
+
   useEffect(() => {
     if (!selectedRun || !live.isAuthenticated) {
       setStepRuns([]);
@@ -459,6 +280,7 @@ export default function WorkflowStudio() {
       cancelled = true;
     };
   }, [selectedRun?.id, live.isAuthenticated]);
+
   useEffect(() => {
     const runId = selectedRun?.id;
     const wsUrl =
@@ -531,6 +353,7 @@ export default function WorkflowStudio() {
     const timer = window.setInterval(() => void live.reload(), 5000);
     return () => window.clearInterval(timer);
   }, [subscription, selectedRun?.id]);
+
   const steps = workflow?.workflow_steps ?? [];
   const selectedStep =
     steps.find((step) => step.id === selectedStepId) ?? steps[0];
@@ -673,7 +496,7 @@ export default function WorkflowStudio() {
         decision: "approve",
       });
       if (result.error) throw new Error(messageOf(result.error));
-      notify("Approved — workflow resumed");
+      notify("Approval completed — workflow resumed");
       await live.reload();
     } catch (error) {
       setApproveError(messageOf(error));
@@ -681,64 +504,59 @@ export default function WorkflowStudio() {
       setApproving(false);
     }
   };
-  if (!hydrated || live.authLoading)
+
+  if (!hydrated || live.authLoading) return <WorkspaceState kind="loading" />;
+  if (!live.isAuthenticated)
     return (
-      <main className="auth-shell">
-        <div className="auth-card">
-          <h1>Connecting to your workspace…</h1>
-        </div>
-      </main>
+      <SignInScreen
+        isLoading={signInLoading}
+        error={signInError ? messageOf(signInError) : undefined}
+        onSubmit={(values) =>
+          void signInEmailPassword(values.email, values.password)
+        }
+      />
     );
-  if (!live.isAuthenticated) return <SignIn />;
-  if (live.loading)
-    return (
-      <main className="auth-shell">
-        <div className="auth-card">
-          <h1>Loading organization data…</h1>
-        </div>
-      </main>
-    );
+  if (live.loading) return <WorkspaceState kind="loading" />;
   if (live.error || !live.data?.organizations_by_pk)
     return (
-      <main className="auth-shell">
-        <div className="auth-card">
-          <span className="section-kicker">WORKSPACE UNAVAILABLE</span>
-          <h1>{live.error ?? "Organization data is unavailable."}</h1>
-          <button className="run-button" onClick={() => void live.reload()}>
-            Try again
-          </button>
-        </div>
-      </main>
+      <WorkspaceState
+        kind="unavailable"
+        message={live.error}
+        onRetry={() => void live.reload()}
+      />
     );
+
   const organization = live.data.organizations_by_pk;
+  const shellProps = {
+    organization,
+    memberships: live.memberships.map((item) => ({
+      label: item.organization.name,
+      value: item.org_id,
+      role: item.role,
+    })),
+    orgId: live.orgId,
+    role: memberRole,
+    userName: live.user?.displayName ?? live.user?.email ?? "Relay Room user",
+    view,
+    workflowCount: workflows.length,
+    subscription,
+    onOrganizationChange: (id: string) => void live.reload(id),
+    onViewChange: setView,
+    onSignOut: () => void signOut(),
+  };
   if (!workflow)
     return (
-      <main className="app-shell">
-        <aside className="sidebar">
-          <div className="brand">
-            <span>
-              relay<span className="brand-soft">room</span>
-            </span>
-          </div>
-        </aside>
-        <section className="workspace">
-          <div className="content empty-state">
-            <span className="section-kicker">NO WORKFLOWS</span>
-            <h1>No workflow yet</h1>
-            <p>
-              {canEdit
-                ? "Create a workflow to begin building an execution path."
-                : "Read-only access — ask an owner or editor to create a workflow."}
-            </p>
-            {canEdit && (
-              <button className="run-button" onClick={addWorkflow}>
-                Create workflow
-              </button>
-            )}
-          </div>
-        </section>
-      </main>
+      <WorkspaceShell {...shellProps}>
+        <Box xcss={styles.mainInner}>
+          <WorkspaceState
+            kind="empty"
+            canCreate={canEdit}
+            onCreate={addWorkflow}
+          />
+        </Box>
+      </WorkspaceShell>
     );
+
   const progress = steps.length
     ? Math.round(
         (steps.filter((step) => stepStatus(step) === "completed").length /
@@ -746,228 +564,68 @@ export default function WorkflowStudio() {
           100,
       )
     : 0;
-  const availableTypes = (Object.keys(typeMeta) as StepType[]).filter(
-    (type) => isOwner || (type !== "db_write" && type !== "notify"),
-  );
   return (
-    <main className="app-shell">
-      <aside className="sidebar">
-        <div className="brand">
-          <div className="brand-mark">
-            <span />
-            <span />
-            <span />
-          </div>
-          <span>
-            relay<span className="brand-soft">room</span>
-          </span>
-        </div>
-        <div className="workspace-label">Workspace</div>
-        {live.memberships.length > 1 ? (
-          <label className="org-switcher">
-            <span className="org-avatar">{organization.name[0]}</span>
-            <select
-              value={live.orgId}
-              onChange={(event) => void live.reload(event.target.value)}
-              aria-label="Select organization"
-            >
-              {live.memberships.map((item) => (
-                <option key={item.org_id} value={item.org_id}>
-                  {item.organization.name} · {item.role}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : (
-          <div className="org-switcher">
-            <span className="org-avatar">{organization.name[0]}</span>
-            <span>
-              <b>{organization.name}</b>
-              <small>{memberRole}</small>
-            </span>
-          </div>
-        )}
-        <nav className="nav">
-          <button
-            className={view === "builder" ? "nav-item active" : "nav-item"}
-            onClick={() => setView("builder")}
-          >
-            ⌘ Workflows <span className="nav-count">{workflows.length}</span>
-          </button>
-          <button
-            className={view === "runs" ? "nav-item active" : "nav-item"}
-            onClick={() => setView("runs")}
-          >
-            ◷ Run history
-          </button>
-        </nav>
-        <div className="sidebar-bottom">
-          <div className="quota-mini">
-            <div>
-              <span>Monthly usage</span>
-              <b>
-                {organization.quota_used}{" "}
-                <em>/ {organization.quota_limit} runs</em>
-              </b>
-            </div>
-            <div className="mini-bar">
-              <span
-                style={{
-                  width: `${Math.min(100, (organization.quota_used / organization.quota_limit) * 100)}%`,
-                }}
-              />
-            </div>
-            <small>
-              {Math.max(0, organization.quota_limit - organization.quota_used)}{" "}
-              runs remaining
-            </small>
-          </div>
-          <div className="profile">
-            <span>{live.user?.displayName ?? live.user?.email}</span>
-            <button
-              className="more"
-              aria-label="Sign out"
-              onClick={() => void signOut()}
-            >
-              ↪
-            </button>
-          </div>
-        </div>
-      </aside>
-      <section className="workspace">
-        <header className="topbar">
-          <div className="breadcrumbs">
-            <span>Workflows</span>
-            <i>/</i>
-            <b>{workflow.name}</b>
-          </div>
-          <div className="top-actions">
-            <span className="live-dot">
-              <i />
-              {subscription === "live"
-                ? "Live updates"
-                : subscription === "connecting"
-                  ? "Connecting…"
-                  : "Refresh fallback"}
-            </span>
-            {canEdit && (
-              <button
-                className="run-button"
-                disabled={running || workflow.id.startsWith("new-")}
-                onClick={() => void runWorkflow()}
-              >
-                {running ? "Starting…" : "Run workflow"}
-              </button>
-            )}
-          </div>
-        </header>
-        <div className="content">
-          <div className="workflow-heading">
-            <div>
-              <div className="eyebrow">
-                {workflow.active ? "ACTIVE WORKFLOW" : "DRAFT WORKFLOW"} ·{" "}
-                {memberRole.toUpperCase()} ACCESS
-              </div>
-              {canEdit ? (
-                <>
-                  <input
-                    className="workflow-title-input"
-                    value={workflow.name}
-                    onChange={(event) =>
-                      updateWorkflow((current) => ({
-                        ...current,
-                        name: event.target.value,
-                      }))
-                    }
-                    aria-label="Workflow name"
-                  />
-                  <textarea
-                    className="workflow-description-input"
-                    value={workflow.description}
-                    onChange={(event) =>
-                      updateWorkflow((current) => ({
-                        ...current,
-                        description: event.target.value,
-                      }))
-                    }
-                    aria-label="Workflow description"
-                  />
-                </>
-              ) : (
-                <>
-                  <h1>{workflow.name}</h1>
-                  <p>{workflow.description}</p>
-                  <span className="readonly-badge">Read-only access</span>
-                </>
-              )}
-            </div>
-            <div className="heading-actions">
-              <label className="workflow-picker">
-                Workflow
-                <select
-                  value={workflow.id}
-                  onChange={(event) => {
-                    setDraft(undefined);
-                    setSelectedWorkflowId(event.target.value);
-                  }}
-                >
-                  {workflows.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {canEdit && (
-                <>
-                  <button className="secondary-button" onClick={addWorkflow}>
-                    New workflow
-                  </button>
-                  <button
-                    className="secondary-button"
-                    disabled={saving}
-                    onClick={() => void save()}
-                  >
-                    {saving ? "Saving…" : "Save changes"}
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-          {saveError && <div className="inline-error">{saveError}</div>}
-          {runError && <div className="inline-error">{runError}</div>}
-          <div className="tabs">
-            <button
-              className={view === "builder" ? "tab active" : "tab"}
-              onClick={() => setView("builder")}
-            >
-              Builder <span>{steps.length}</span>
-            </button>
-            <button
-              className={view === "runs" ? "tab active" : "tab"}
-              onClick={() => setView("runs")}
-            >
-              Runs <span>{workflow.workflow_runs.length}</span>
-            </button>
-            <span className="autosave">
-              <i />
-              {subscription === "live"
+    <WorkspaceShell {...shellProps}>
+      <Box xcss={styles.mainInner}>
+        <Stack space="space.400">
+          <WorkflowHeader
+            workflow={workflow}
+            workflows={workflows}
+            role={memberRole}
+            canEdit={canEdit}
+            saving={saving}
+            running={running}
+            onWorkflowChange={(id) => {
+              setDraft(undefined);
+              setSelectedWorkflowId(id);
+            }}
+            onChange={(change) =>
+              updateWorkflow((current) => ({ ...current, ...change }))
+            }
+            onNew={addWorkflow}
+            onSave={() => void save()}
+            onRun={() => void runWorkflow()}
+          />
+          <WorkflowTabs
+            view={view}
+            stepCount={steps.length}
+            runCount={workflow.workflow_runs.length}
+            syncLabel={
+              subscription === "live"
                 ? "Live from Nhost"
                 : subscription === "connecting"
                   ? "Connecting to updates"
-                  : "Updates refresh every 5s"}
-            </span>
-          </div>
-          {view === "builder" ? (
-            <>
-              <div className="signal-card">
-                <div className="signal-card-copy">
-                  <div className="eyebrow mint-eyebrow">
+                  : "Updates refresh every 5s"
+            }
+            onChange={setView}
+          />
+          {(saveError || runError) && (
+            <Stack space="space.200">
+              {saveError && (
+                <Feedback title="Save failed">{saveError}</Feedback>
+              )}
+              {runError && <Feedback title="Run failed">{runError}</Feedback>}
+            </Stack>
+          )}
+          {view === "runs" ? (
+            <RunHistory
+              runs={workflow.workflow_runs}
+              organizationName={organization.name}
+              onInspect={(runId) => {
+                setSelectedRunId(runId);
+                setView("builder");
+              }}
+            />
+          ) : (
+            <Stack space="space.300">
+              <Box xcss={styles.runSummary}>
+                <Stack space="space.100">
+                  <Text size="small" color="color.text.subtle">
                     {selectedRun
-                      ? `RUN DETAILS · ${selectedRun.id.slice(0, 8).toUpperCase()}`
-                      : "READY TO RUN"}
-                  </div>
-                  <h2>
+                      ? `Run details · ${selectedRun.id.slice(0, 8).toUpperCase()}`
+                      : "Ready to run"}
+                  </Text>
+                  <Heading size="medium">
                     {selectedRun?.status === "paused"
                       ? "Waiting for approval"
                       : selectedRun?.status === "completed"
@@ -975,452 +633,119 @@ export default function WorkflowStudio() {
                         : selectedRun
                           ? "Workflow run"
                           : "Build an execution path"}
-                  </h2>
-                  <p>
+                  </Heading>
+                  <Text color="color.text.subtle">
                     {selectedRun
                       ? `${selectedRun.trigger_type} · started ${formatTime(selectedRun.started_at)}`
                       : "Add ordered steps and save before running."}
-                  </p>
-                  <div className="run-meta">
-                    <StatusPill status={selectedRun?.status ?? "pending"} />
-                  </div>
-                </div>
-                <div className="signal-orbit">
-                  <div className="orbit-core">
-                    <b>{progress}</b>
-                    <small>% complete</small>
-                  </div>
-                </div>
-              </div>
-              <div className="builder-grid">
-                <section className="steps-panel">
-                  <div className="section-head">
-                    <div>
-                      <span className="section-kicker">EXECUTION PATH</span>
-                      <h2>
-                        Workflow steps <span>{steps.length}</span>
-                      </h2>
-                    </div>
-                    {canEdit && (
-                      <label className="small-link">
-                        Add step
-                        <select
-                          className="inline-select"
-                          value=""
-                          onChange={(event) => {
-                            if (event.target.value) {
-                              addStep(event.target.value as StepType);
-                              event.target.value = "";
-                            }
-                          }}
-                        >
-                          <option value="">Choose type</option>
-                          {availableTypes.map((type) => (
-                            <option key={type} value={type}>
-                              {typeMeta[type].label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    )}
-                  </div>
-                  <div className="step-list">
-                    {steps.length ? (
-                      steps.map((step, index) => (
-                        <button
-                          className={`step-row ${selectedStep?.id === step.id ? "selected" : ""}`}
-                          key={step.id}
-                          onClick={() => setSelectedStepId(step.id)}
-                        >
-                          <div
-                            className={`step-marker ${typeMeta[step.type].tone}`}
-                          >
-                            <span>{typeMeta[step.type].icon}</span>
-                            {index < steps.length - 1 && <i />}
-                          </div>
-                          <div className="step-main">
-                            <div className="step-topline">
-                              <span className="step-eyebrow">
-                                {String(index + 1).padStart(2, "0")} ·{" "}
-                                {typeMeta[step.type].label}
-                              </span>
-                              <StatusPill status={stepStatus(step)} />
-                            </div>
-                            <h3>
-                              {String(
-                                step.config.title ?? typeMeta[step.type].label,
-                              )}
-                            </h3>
-                            <p>
-                              {step.type === "http_request"
-                                ? `${String(step.config.method ?? "GET")} · ${String(step.config.url ?? "")}`
-                                : String(
-                                    step.config.reason ??
-                                      step.config.expression ??
-                                      step.config.prompt ??
-                                      "Configured workflow step",
-                                  )}
-                            </p>
-                          </div>
-                        </button>
-                      ))
-                    ) : (
-                      <p className="empty-copy">
-                        No steps yet. Add the first step to define this
-                        workflow.
-                      </p>
-                    )}
-                  </div>
-                </section>
-                <aside className="inspector">
-                  <div className="inspector-top">
-                    <div>
-                      <span className="section-kicker">
-                        {selectedStep
-                          ? `STEP ${String(selectedStep.position + 1).padStart(2, "0")}`
-                          : "WORKFLOW"}
-                      </span>
-                      <h2>
-                        {selectedStep
-                          ? typeMeta[selectedStep.type].label
-                          : "Select a step"}
-                      </h2>
-                    </div>
-                  </div>
-                  {selectedStep ? (
-                    <>
-                      <StepFields
-                        step={selectedStep}
-                        readOnly={!canEdit}
-                        onChange={(config) =>
-                          updateStep(selectedStep.id, config)
-                        }
-                      />
-                      {selectedStep.type === "approval_gate" && (
-                        <div className="approval-box">
-                          <div>
-                            <b>Approval required</b>
-                            <p>
-                              Owners and editors in {organization.name} can
-                              approve this gate.
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                      {selectedStep.status !== "paused" &&
-                        stepRuns.find(
+                  </Text>
+                </Stack>
+                <Stack space="space.100" alignInline="end">
+                  <Text weight="semibold">{progress}% complete</Text>
+                  <Box>
+                    <ProgressBar
+                      ariaLabel={`${progress}% of workflow steps completed`}
+                      value={progress / 100}
+                    />
+                  </Box>
+                </Stack>
+              </Box>
+              <Box xcss={styles.builderGrid}>
+                <StepList
+                  steps={steps}
+                  selectedStepId={selectedStep?.id}
+                  role={memberRole}
+                  typeMeta={typeMeta}
+                  statusFor={stepStatus}
+                  onSelect={setSelectedStepId}
+                  onAdd={addStep}
+                />
+                <StepInspector
+                  step={selectedStep}
+                  stepRun={
+                    selectedStep
+                      ? stepRuns.find(
                           (run) => run.workflow_step_id === selectedStep.id,
-                        )?.output && (
-                          <details className="raw-output">
-                            <summary>Run output</summary>
-                            <pre>
-                              {JSON.stringify(
-                                stepRuns.find(
-                                  (run) =>
-                                    run.workflow_step_id === selectedStep.id,
-                                )?.output,
-                                null,
-                                2,
-                              )}
-                            </pre>
-                          </details>
-                        )}
-                      {canEdit && (
-                        <div className="inspector-footer">
-                          <button
-                            className="ghost-button"
-                            disabled={selectedStep.position === 0}
-                            onClick={() => moveStep(selectedStep.id, -1)}
-                          >
-                            Move up
-                          </button>
-                          <button
-                            className="ghost-button"
-                            disabled={
-                              selectedStep.position === steps.length - 1
-                            }
-                            onClick={() => moveStep(selectedStep.id, 1)}
-                          >
-                            Move down
-                          </button>
-                          <button
-                            className="ghost-button danger"
-                            onClick={() => removeStep(selectedStep.id)}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      )}
-                      {stepStatus(selectedStep) === "paused" && canEdit && (
-                        <>
-                          <button
-                            className="approve-button"
-                            disabled={approving}
-                            onClick={() => void approve()}
-                          >
-                            {approving ? "Approving…" : "Approve & continue →"}
-                          </button>
-                          {approveError && (
-                            <div className="inline-error">{approveError}</div>
-                          )}
-                        </>
-                      )}
-                    </>
-                  ) : (
-                    <p className="empty-copy">Choose a step to configure it.</p>
+                        )
+                      : undefined
+                  }
+                  organization={organization}
+                  role={memberRole}
+                  meta={selectedStep ? typeMeta[selectedStep.type] : undefined}
+                  status={selectedStep ? stepStatus(selectedStep) : "pending"}
+                  approving={approving}
+                  approveError={approveError}
+                  canMoveDown={Boolean(
+                    selectedStep && selectedStep.position < steps.length - 1,
                   )}
-                </aside>
-              </div>
-              <div className="bottom-grid">
-                <section className="trigger-section">
-                  <div className="section-head">
-                    <div>
-                      <span className="section-kicker">STARTING POINTS</span>
-                      <h2>
-                        Triggers{" "}
-                        <span>{workflow.workflow_triggers.length}</span>
-                      </h2>
-                    </div>
-                    {canEdit && (
-                      <button
-                        className="small-link"
-                        onClick={() =>
-                          updateWorkflow((current) => ({
-                            ...current,
-                            workflow_triggers: [
-                              ...current.workflow_triggers,
-                              {
-                                id: localId(),
-                                type: "manual",
-                                config: {},
-                                enabled: true,
-                              },
-                            ],
-                          }))
-                        }
-                      >
-                        Add trigger
-                      </button>
-                    )}
-                  </div>
-                  <div className="trigger-list">
-                    {workflow.workflow_triggers.map((trigger, index) => (
-                      <div key={trigger.id}>
-                        <span>{trigger.type}</span>
-                        {canEdit ? (
-                          <>
-                            <select
-                              className="inline-select"
-                              value={trigger.type}
-                              onChange={(event) => {
-                                const type = event.target.value as TriggerType;
-                                if (type === "webhook" && !isOwner) return;
-                                updateWorkflow((current) => ({
-                                  ...current,
-                                  workflow_triggers:
-                                    current.workflow_triggers.map(
-                                      (item, itemIndex) =>
-                                        itemIndex === index
-                                          ? {
-                                              ...item,
-                                              type,
-                                              config:
-                                                type === "webhook"
-                                                  ? { publicId: "" }
-                                                  : type === "scheduled"
-                                                    ? { cron: "0 * * * *" }
-                                                    : item.config,
-                                            }
-                                          : item,
-                                    ),
-                                }));
-                              }}
-                            >
-                              <option value="manual">manual</option>
-                              {isOwner && (
-                                <option value="webhook">webhook</option>
-                              )}
-                              <option value="scheduled">scheduled</option>
-                              <option value="database_event">
-                                database event
-                              </option>
-                            </select>
-                            {trigger.type === "webhook" && (
-                              <input
-                                className="text-field"
-                                placeholder="Public webhook ID"
-                                value={String(trigger.config.publicId ?? "")}
-                                onChange={(event) =>
-                                  updateWorkflow((current) => ({
-                                    ...current,
-                                    workflow_triggers:
-                                      current.workflow_triggers.map(
-                                        (item, itemIndex) =>
-                                          itemIndex === index
-                                            ? {
-                                                ...item,
-                                                config: {
-                                                  ...item.config,
-                                                  publicId: event.target.value,
-                                                },
-                                              }
-                                            : item,
-                                      ),
-                                  }))
-                                }
-                              />
-                            )}
-                            {trigger.type === "scheduled" && (
-                              <input
-                                className="text-field"
-                                value={String(trigger.config.cron ?? "")}
-                                onChange={(event) =>
-                                  updateWorkflow((current) => ({
-                                    ...current,
-                                    workflow_triggers:
-                                      current.workflow_triggers.map(
-                                        (item, itemIndex) =>
-                                          itemIndex === index
-                                            ? {
-                                                ...item,
-                                                config: {
-                                                  ...item.config,
-                                                  cron: event.target.value,
-                                                },
-                                              }
-                                            : item,
-                                      ),
-                                  }))
-                                }
-                              />
-                            )}
-                            {trigger.type === "database_event" && (
-                              <small>
-                                Starts from the watched_orders event trigger.
-                              </small>
-                            )}
-                            <button
-                              className="ghost-button danger"
-                              onClick={() =>
-                                updateWorkflow((current) => ({
-                                  ...current,
-                                  workflow_triggers:
-                                    current.workflow_triggers.filter(
-                                      (_, itemIndex) => itemIndex !== index,
-                                    ),
-                                }))
-                              }
-                            >
-                              Remove
-                            </button>
-                          </>
-                        ) : (
-                          <small>
-                            {trigger.type === "webhook"
-                              ? `Signed endpoint public ID: ${String(trigger.config.publicId ?? "not configured")}`
-                              : JSON.stringify(trigger.config)}
-                          </small>
-                        )}
-                        <em className="enabled">
-                          {trigger.enabled ? "Enabled" : "Disabled"}
-                        </em>
-                      </div>
-                    ))}
-                  </div>
-                  {workflow.workflow_triggers.some(
-                    (trigger) => trigger.type === "webhook",
-                  ) && (
-                    <p className="field-help">
-                      Webhook runs originate from the signed external{" "}
-                      <code>/webhookStartWorkflow</code> endpoint; this UI does
-                      not simulate them.
-                    </p>
-                  )}
-                </section>
-                <section className="activity-section">
-                  <div className="section-head">
-                    <span className="section-kicker">OBSERVABILITY</span>
-                    <h2>Selected run</h2>
-                  </div>
-                  {selectedRun ? (
-                    <div className="activity-list">
-                      {stepRuns.length ? (
-                        stepRuns.map((run) => (
-                          <div className="activity-item" key={run.id}>
-                            <span className={`activity-line ${run.status}`} />
-                            <time>{run.attempt_count}×</time>
-                            <div>
-                              <b>
-                                {(steps.find(
-                                  (step) => step.id === run.workflow_step_id,
-                                )?.config.title as string) ?? "Workflow step"}
-                              </b>
-                              <p>
-                                {run.error
-                                  ? JSON.stringify(run.error)
-                                  : run.status}
-                              </p>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="empty-copy">
-                          No step runs for this execution.
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="empty-copy">
-                      Select or start a run to inspect step status.
-                    </p>
-                  )}
-                </section>
-              </div>
-            </>
-          ) : (
-            <div className="runs-view">
-              <div className="runs-summary">
-                <div>
-                  <span className="section-kicker">RUN HISTORY</span>
-                  <h2>Recent workflow runs</h2>
-                  <p>Past executions stay scoped to {organization.name}.</p>
-                </div>
-              </div>
-              {workflow.workflow_runs.length ? (
-                workflow.workflow_runs.map((run) => (
-                  <div className="run-row" key={run.id}>
-                    <span className={`run-status-dot ${run.status}`} />
-                    <b>{run.id.slice(0, 8).toUpperCase()}</b>
-                    <span>{run.trigger_type}</span>
-                    <StatusPill status={run.status} />
-                    <small>
-                      {formatTime(run.started_at)} · {duration(run)}
-                    </small>
-                    <button
-                      onClick={() => {
-                        setSelectedRunId(run.id);
-                        setView("builder");
-                      }}
-                    >
-                      Inspect →
-                    </button>
-                  </div>
-                ))
-              ) : (
-                <p className="empty-copy">
-                  No runs yet. Run this workflow to create the first execution.
-                </p>
-              )}
-            </div>
+                  onChange={(config) =>
+                    selectedStep && updateStep(selectedStep.id, config)
+                  }
+                  onMove={(direction) =>
+                    selectedStep && moveStep(selectedStep.id, direction)
+                  }
+                  onRemove={() => selectedStep && removeStep(selectedStep.id)}
+                  onApprove={() => void approve()}
+                />
+              </Box>
+              <Box xcss={styles.bottomGrid}>
+                <TriggerList
+                  triggers={workflow.workflow_triggers}
+                  role={memberRole}
+                  onAdd={() =>
+                    updateWorkflow((current) => ({
+                      ...current,
+                      workflow_triggers: [
+                        ...current.workflow_triggers,
+                        {
+                          id: localId(),
+                          type: "manual",
+                          config: {},
+                          enabled: true,
+                        },
+                      ],
+                    }))
+                  }
+                  onUpdate={(index, change) =>
+                    updateWorkflow((current) => ({
+                      ...current,
+                      workflow_triggers: current.workflow_triggers.map(
+                        (trigger, itemIndex) =>
+                          itemIndex === index
+                            ? { ...trigger, ...change }
+                            : trigger,
+                      ),
+                    }))
+                  }
+                  onRemove={(index) =>
+                    updateWorkflow((current) => ({
+                      ...current,
+                      workflow_triggers: current.workflow_triggers.filter(
+                        (_, itemIndex) => itemIndex !== index,
+                      ),
+                    }))
+                  }
+                />
+                <ActivityPanel
+                  steps={steps}
+                  stepRuns={stepRuns}
+                  hasSelectedRun={Boolean(selectedRun)}
+                />
+              </Box>
+            </Stack>
           )}
-        </div>
-      </section>
+        </Stack>
+      </Box>
       {toast && (
-        <div className="toast">
-          <span>✓</span>
-          {toast}
-        </div>
+        <FlagGroup label="Workflow notifications">
+          <AutoDismissFlag
+            id="relay-room-toast"
+            title={toast}
+            appearance="success"
+            icon={<CheckIcon label="" />}
+          />
+        </FlagGroup>
       )}
-    </main>
+    </WorkspaceShell>
   );
 }

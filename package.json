@@ -3,9 +3,9 @@
   "private": true,
   "packageManager": "pnpm@11.3.0",
   "scripts": {
-    "dev": "pnpm --filter @relayroom/web dev",
-    "build": "pnpm --filter @relayroom/web build",
-    "lint": "pnpm --filter @relayroom/web lint",
+    "dev": "cd apps/web && ./node_modules/.bin/next dev",
+    "build": "cd apps/web && ./node_modules/.bin/next build",
+    "lint": "cd apps/web && node scripts/check-ads-guardrails.mjs && ./node_modules/.bin/eslint .",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
