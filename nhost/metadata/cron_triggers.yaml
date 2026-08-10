@@ -5,11 +5,12 @@
     "schedule": "* * * * *",
     "include_in_metadata": true,
     "payload": {},
-    "headers": [
-      {
-        "name": "x-relay-action-secret",
-        "value_from_env": "RELAY_ACTION_SECRET"
-      }
-    ]
-  }
+    "headers":
+      [
+        {
+          "name": "x-relay-action-secret",
+          "value_from_env": "RELAY_ACTION_SECRET",
+        },
+      ],
+  },
 ]

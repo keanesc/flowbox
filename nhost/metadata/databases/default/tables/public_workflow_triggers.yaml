@@ -1,39 +1,30 @@
 {
-  "table": {
-    "schema": "public",
-    "name": "workflow_triggers"
-  },
-  "object_relationships": [
-    {
-      "name": "workflow",
-      "using": {
-        "foreign_key_constraint_on": "workflow_id"
-      }
-    }
-  ],
-  "select_permissions": [
-    {
-      "role": "user",
-      "permission": {
-        "columns": [
-          "id",
-          "workflow_id",
-          "type",
-          "config",
-          "enabled"
-        ],
-        "filter": {
-          "workflow": {
-            "organization": {
-              "members": {
-                "user_id": {
-                  "_eq": "X-Hasura-User-Id"
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  ]
+  "table": { "schema": "public", "name": "workflow_triggers" },
+  "object_relationships":
+    [
+      {
+        "name": "workflow",
+        "using": { "foreign_key_constraint_on": "workflow_id" },
+      },
+    ],
+  "select_permissions":
+    [
+      {
+        "role": "user",
+        "permission":
+          {
+            "columns": ["id", "workflow_id", "type", "config", "enabled"],
+            "filter":
+              {
+                "workflow":
+                  {
+                    "organization":
+                      {
+                        "members": { "user_id": { "_eq": "X-Hasura-User-Id" } },
+                      },
+                  },
+              },
+          },
+      },
+    ],
 }

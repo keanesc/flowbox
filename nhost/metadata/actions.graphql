@@ -8,8 +8,19 @@ type SaveWorkflowOutput {
 }
 
 type Mutation {
-  triggerWorkflowRun(workflow_id: uuid!, trigger_context: jsonb): TriggerWorkflowRunOutput!
-  approveStep(workflow_run_id: uuid!, step_run_id: uuid!, decision: String!): TriggerWorkflowRunOutput!
-  webhookStartWorkflow(public_id: String!, payload: jsonb): TriggerWorkflowRunOutput!
+  triggerWorkflowRun(
+    workflow_id: uuid!
+    trigger_context: jsonb
+  ): TriggerWorkflowRunOutput!
+  approveStep(
+    workflow_run_id: uuid!
+    step_run_id: uuid!
+    decision: String!
+  ): TriggerWorkflowRunOutput!
+  webhookStartWorkflow(
+    public_id: String!
+    payload: jsonb
+    signature: String!
+  ): TriggerWorkflowRunOutput!
   saveWorkflow(workflow: jsonb!): SaveWorkflowOutput!
 }

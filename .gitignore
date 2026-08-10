@@ -6,6 +6,8 @@ dist
 .env.*
 !.env.example
 .codex/
+.playwright-cli/
 .nhost/
 .secrets
+.evidence/
 coverage
