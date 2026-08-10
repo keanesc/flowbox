@@ -391,7 +391,7 @@ export default function WorkflowStudio() {
   // render identical to the server response so the sign-in shell never causes
   // a hydration replacement before an authenticated run is observed.
   const [hydrated, setHydrated] = useState(false);
-  const [view, setView] = useState<"builder" | "runs">("builder");
+  const [view, setView] = useState<"builder" | "triggers" | "runs">("builder");
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>();
   const [selectedStepId, setSelectedStepId] = useState<string>();
   const [selectedRunId, setSelectedRunId] = useState<string>();
@@ -739,13 +739,6 @@ export default function WorkflowStudio() {
         </section>
       </main>
     );
-  const progress = steps.length
-    ? Math.round(
-        (steps.filter((step) => stepStatus(step) === "completed").length /
-          steps.length) *
-          100,
-      )
-    : 0;
   const availableTypes = (Object.keys(typeMeta) as StepType[]).filter(
     (type) => isOwner || (type !== "db_write" && type !== "notify"),
   );
@@ -864,9 +857,10 @@ export default function WorkflowStudio() {
         <div className="content">
           <div className="workflow-heading">
             <div>
-              <div className="eyebrow">
-                {workflow.active ? "ACTIVE WORKFLOW" : "DRAFT WORKFLOW"} ·{" "}
-                {memberRole.toUpperCase()} ACCESS
+              <div className="workflow-meta">
+                <span>{workflow.active ? "Active" : "Draft"}</span>
+                <span>{steps.length} steps</span>
+                {selectedRun && <StatusPill status={selectedRun.status} />}
               </div>
               {canEdit ? (
                 <>
@@ -944,6 +938,12 @@ export default function WorkflowStudio() {
               Builder <span>{steps.length}</span>
             </button>
             <button
+              className={view === "triggers" ? "tab active" : "tab"}
+              onClick={() => setView("triggers")}
+            >
+              Triggers <span>{workflow.workflow_triggers.length}</span>
+            </button>
+            <button
               className={view === "runs" ? "tab active" : "tab"}
               onClick={() => setView("runs")}
             >
@@ -959,262 +959,258 @@ export default function WorkflowStudio() {
             </span>
           </div>
           {view === "builder" ? (
-            <>
-              <div className="signal-card">
-                <div className="signal-card-copy">
-                  <div className="eyebrow mint-eyebrow">
-                    {selectedRun
-                      ? `RUN DETAILS · ${selectedRun.id.slice(0, 8).toUpperCase()}`
-                      : "READY TO RUN"}
+            <div className="builder-grid">
+              <section className="steps-panel">
+                <div className="section-head">
+                  <div>
+                    <h2>
+                      Workflow steps <span>{steps.length}</span>
+                    </h2>
                   </div>
-                  <h2>
-                    {selectedRun?.status === "paused"
-                      ? "Waiting for approval"
-                      : selectedRun?.status === "completed"
-                        ? "Run completed"
-                        : selectedRun
-                          ? "Workflow run"
-                          : "Build an execution path"}
-                  </h2>
-                  <p>
-                    {selectedRun
-                      ? `${selectedRun.trigger_type} · started ${formatTime(selectedRun.started_at)}`
-                      : "Add ordered steps and save before running."}
-                  </p>
-                  <div className="run-meta">
-                    <StatusPill status={selectedRun?.status ?? "pending"} />
-                  </div>
-                </div>
-                <div className="signal-orbit">
-                  <div className="orbit-core">
-                    <b>{progress}</b>
-                    <small>% complete</small>
-                  </div>
-                </div>
-              </div>
-              <div className="builder-grid">
-                <section className="steps-panel">
-                  <div className="section-head">
-                    <div>
-                      <span className="section-kicker">EXECUTION PATH</span>
-                      <h2>
-                        Workflow steps <span>{steps.length}</span>
-                      </h2>
-                    </div>
-                    {canEdit && (
-                      <label className="small-link">
-                        Add step
-                        <select
-                          className="inline-select"
-                          value=""
-                          onChange={(event) => {
-                            if (event.target.value) {
-                              addStep(event.target.value as StepType);
-                              event.target.value = "";
-                            }
-                          }}
-                        >
-                          <option value="">Choose type</option>
-                          {availableTypes.map((type) => (
-                            <option key={type} value={type}>
-                              {typeMeta[type].label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    )}
-                  </div>
-                  <div className="step-list">
-                    {steps.length ? (
-                      steps.map((step, index) => (
-                        <button
-                          className={`step-row ${selectedStep?.id === step.id ? "selected" : ""}`}
-                          key={step.id}
-                          onClick={() => setSelectedStepId(step.id)}
-                        >
-                          <div
-                            className={`step-marker ${typeMeta[step.type].tone}`}
-                          >
-                            <span>{typeMeta[step.type].icon}</span>
-                            {index < steps.length - 1 && <i />}
-                          </div>
-                          <div className="step-main">
-                            <div className="step-topline">
-                              <span className="step-eyebrow">
-                                {String(index + 1).padStart(2, "0")} ·{" "}
-                                {typeMeta[step.type].label}
-                              </span>
-                              <StatusPill status={stepStatus(step)} />
-                            </div>
-                            <h3>
-                              {String(
-                                step.config.title ?? typeMeta[step.type].label,
-                              )}
-                            </h3>
-                            <p>
-                              {step.type === "http_request"
-                                ? `${String(step.config.method ?? "GET")} · ${String(step.config.url ?? "")}`
-                                : String(
-                                    step.config.reason ??
-                                      step.config.expression ??
-                                      step.config.prompt ??
-                                      "Configured workflow step",
-                                  )}
-                            </p>
-                          </div>
-                        </button>
-                      ))
-                    ) : (
-                      <p className="empty-copy">
-                        No steps yet. Add the first step to define this
-                        workflow.
-                      </p>
-                    )}
-                  </div>
-                </section>
-                <aside className="inspector">
-                  <div className="inspector-top">
-                    <div>
-                      <span className="section-kicker">
-                        {selectedStep
-                          ? `STEP ${String(selectedStep.position + 1).padStart(2, "0")}`
-                          : "WORKFLOW"}
-                      </span>
-                      <h2>
-                        {selectedStep
-                          ? typeMeta[selectedStep.type].label
-                          : "Select a step"}
-                      </h2>
-                    </div>
-                  </div>
-                  {selectedStep ? (
-                    <>
-                      <StepFields
-                        step={selectedStep}
-                        readOnly={!canEdit}
-                        onChange={(config) =>
-                          updateStep(selectedStep.id, config)
-                        }
-                      />
-                      {selectedStep.type === "approval_gate" && (
-                        <div className="approval-box">
-                          <div>
-                            <b>Approval required</b>
-                            <p>
-                              Owners and editors in {organization.name} can
-                              approve this gate.
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                      {selectedStep.status !== "paused" &&
-                        stepRuns.find(
-                          (run) => run.workflow_step_id === selectedStep.id,
-                        )?.output && (
-                          <details className="raw-output">
-                            <summary>Run output</summary>
-                            <pre>
-                              {JSON.stringify(
-                                stepRuns.find(
-                                  (run) =>
-                                    run.workflow_step_id === selectedStep.id,
-                                )?.output,
-                                null,
-                                2,
-                              )}
-                            </pre>
-                          </details>
-                        )}
-                      {canEdit && (
-                        <div className="inspector-footer">
-                          <button
-                            className="ghost-button"
-                            disabled={selectedStep.position === 0}
-                            onClick={() => moveStep(selectedStep.id, -1)}
-                          >
-                            Move up
-                          </button>
-                          <button
-                            className="ghost-button"
-                            disabled={
-                              selectedStep.position === steps.length - 1
-                            }
-                            onClick={() => moveStep(selectedStep.id, 1)}
-                          >
-                            Move down
-                          </button>
-                          <button
-                            className="ghost-button danger"
-                            onClick={() => removeStep(selectedStep.id)}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      )}
-                      {stepStatus(selectedStep) === "paused" && canEdit && (
-                        <>
-                          <button
-                            className="approve-button"
-                            disabled={approving}
-                            onClick={() => void approve()}
-                          >
-                            {approving ? "Approving…" : "Approve & continue →"}
-                          </button>
-                          {approveError && (
-                            <div className="inline-error">{approveError}</div>
-                          )}
-                        </>
-                      )}
-                    </>
-                  ) : (
-                    <p className="empty-copy">Choose a step to configure it.</p>
-                  )}
-                </aside>
-              </div>
-              <div className="bottom-grid">
-                <section className="trigger-section">
-                  <div className="section-head">
-                    <div>
-                      <span className="section-kicker">STARTING POINTS</span>
-                      <h2>
-                        Triggers{" "}
-                        <span>{workflow.workflow_triggers.length}</span>
-                      </h2>
-                    </div>
-                    {canEdit && (
-                      <button
-                        className="small-link"
-                        onClick={() =>
-                          updateWorkflow((current) => ({
-                            ...current,
-                            workflow_triggers: [
-                              ...current.workflow_triggers,
-                              {
-                                id: localId(),
-                                type: "manual",
-                                config: {},
-                                enabled: true,
-                              },
-                            ],
-                          }))
-                        }
+                  {canEdit && (
+                    <label className="small-link">
+                      Add step
+                      <select
+                        className="inline-select"
+                        value=""
+                        onChange={(event) => {
+                          if (event.target.value) {
+                            addStep(event.target.value as StepType);
+                            event.target.value = "";
+                          }
+                        }}
                       >
-                        Add trigger
+                        <option value="">Choose type</option>
+                        {availableTypes.map((type) => (
+                          <option key={type} value={type}>
+                            {typeMeta[type].label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                </div>
+                <div className="step-list">
+                  {steps.length ? (
+                    steps.map((step, index) => (
+                      <button
+                        className={`step-row ${selectedStep?.id === step.id ? "selected" : ""}`}
+                        key={step.id}
+                        onClick={() => setSelectedStepId(step.id)}
+                      >
+                        <div
+                          className={`step-marker ${typeMeta[step.type].tone}`}
+                        >
+                          <span>{typeMeta[step.type].icon}</span>
+                          {index < steps.length - 1 && <i />}
+                        </div>
+                        <div className="step-main">
+                          <div className="step-topline">
+                            <span className="step-eyebrow">
+                              {String(index + 1).padStart(2, "0")} ·{" "}
+                              {typeMeta[step.type].label}
+                            </span>
+                            <StatusPill status={stepStatus(step)} />
+                          </div>
+                          <h3>
+                            {String(
+                              step.config.title ?? typeMeta[step.type].label,
+                            )}
+                          </h3>
+                          <p>
+                            {step.type === "http_request"
+                              ? `${String(step.config.method ?? "GET")} · ${String(step.config.url ?? "")}`
+                              : String(
+                                  step.config.reason ??
+                                    step.config.expression ??
+                                    step.config.prompt ??
+                                    "Configured workflow step",
+                                )}
+                          </p>
+                        </div>
                       </button>
-                    )}
+                    ))
+                  ) : (
+                    <p className="empty-copy">
+                      No steps yet. Add the first step to define this workflow.
+                    </p>
+                  )}
+                </div>
+              </section>
+              <aside className="inspector">
+                <div className="inspector-top">
+                  <div>
+                    <span className="section-kicker">
+                      {selectedStep
+                        ? `Step ${String(selectedStep.position + 1).padStart(2, "0")}`
+                        : "Step details"}
+                    </span>
+                    <h2>
+                      {selectedStep
+                        ? typeMeta[selectedStep.type].label
+                        : "Select a step"}
+                    </h2>
                   </div>
-                  <div className="trigger-list">
-                    {workflow.workflow_triggers.map((trigger, index) => (
-                      <div key={trigger.id}>
-                        <span>{trigger.type}</span>
-                        {canEdit ? (
-                          <>
-                            <select
-                              className="inline-select"
-                              value={trigger.type}
-                              onChange={(event) => {
-                                const type = event.target.value as TriggerType;
-                                if (type === "webhook" && !isOwner) return;
+                </div>
+                {selectedStep ? (
+                  <>
+                    <StepFields
+                      step={selectedStep}
+                      readOnly={!canEdit}
+                      onChange={(config) => updateStep(selectedStep.id, config)}
+                    />
+                    {selectedStep.type === "approval_gate" && (
+                      <div className="approval-box">
+                        <div>
+                          <b>Approval required</b>
+                          <p>
+                            Owners and editors in {organization.name} can
+                            approve this gate.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    {selectedStep.status !== "paused" &&
+                      stepRuns.find(
+                        (run) => run.workflow_step_id === selectedStep.id,
+                      )?.output && (
+                        <details className="raw-output">
+                          <summary>Run output</summary>
+                          <pre>
+                            {JSON.stringify(
+                              stepRuns.find(
+                                (run) =>
+                                  run.workflow_step_id === selectedStep.id,
+                              )?.output,
+                              null,
+                              2,
+                            )}
+                          </pre>
+                        </details>
+                      )}
+                    {canEdit && (
+                      <div className="inspector-footer">
+                        <button
+                          className="ghost-button"
+                          disabled={selectedStep.position === 0}
+                          onClick={() => moveStep(selectedStep.id, -1)}
+                        >
+                          Move up
+                        </button>
+                        <button
+                          className="ghost-button"
+                          disabled={selectedStep.position === steps.length - 1}
+                          onClick={() => moveStep(selectedStep.id, 1)}
+                        >
+                          Move down
+                        </button>
+                        <button
+                          className="ghost-button danger"
+                          onClick={() => removeStep(selectedStep.id)}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
+                    {stepStatus(selectedStep) === "paused" && canEdit && (
+                      <>
+                        <button
+                          className="approve-button"
+                          disabled={approving}
+                          onClick={() => void approve()}
+                        >
+                          {approving ? "Approving…" : "Approve & continue →"}
+                        </button>
+                        {approveError && (
+                          <div className="inline-error">{approveError}</div>
+                        )}
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <p className="empty-copy">Choose a step to configure it.</p>
+                )}
+              </aside>
+            </div>
+          ) : view === "triggers" ? (
+            <div className="bottom-grid">
+              <section className="trigger-section">
+                <div className="section-head">
+                  <div>
+                    <h2>
+                      Triggers <span>{workflow.workflow_triggers.length}</span>
+                    </h2>
+                  </div>
+                  {canEdit && (
+                    <button
+                      className="small-link"
+                      onClick={() =>
+                        updateWorkflow((current) => ({
+                          ...current,
+                          workflow_triggers: [
+                            ...current.workflow_triggers,
+                            {
+                              id: localId(),
+                              type: "manual",
+                              config: {},
+                              enabled: true,
+                            },
+                          ],
+                        }))
+                      }
+                    >
+                      Add trigger
+                    </button>
+                  )}
+                </div>
+                <div className="trigger-list">
+                  {workflow.workflow_triggers.map((trigger, index) => (
+                    <div key={trigger.id}>
+                      <span>{trigger.type}</span>
+                      {canEdit ? (
+                        <>
+                          <select
+                            className="inline-select"
+                            value={trigger.type}
+                            onChange={(event) => {
+                              const type = event.target.value as TriggerType;
+                              if (type === "webhook" && !isOwner) return;
+                              updateWorkflow((current) => ({
+                                ...current,
+                                workflow_triggers:
+                                  current.workflow_triggers.map(
+                                    (item, itemIndex) =>
+                                      itemIndex === index
+                                        ? {
+                                            ...item,
+                                            type,
+                                            config:
+                                              type === "webhook"
+                                                ? { publicId: "" }
+                                                : type === "scheduled"
+                                                  ? { cron: "0 * * * *" }
+                                                  : item.config,
+                                          }
+                                        : item,
+                                  ),
+                              }));
+                            }}
+                          >
+                            <option value="manual">manual</option>
+                            {isOwner && (
+                              <option value="webhook">webhook</option>
+                            )}
+                            <option value="scheduled">scheduled</option>
+                            <option value="database_event">
+                              database event
+                            </option>
+                          </select>
+                          {trigger.type === "webhook" && (
+                            <input
+                              className="text-field"
+                              placeholder="Public webhook ID"
+                              value={String(trigger.config.publicId ?? "")}
+                              onChange={(event) =>
                                 updateWorkflow((current) => ({
                                   ...current,
                                   workflow_triggers:
@@ -1223,167 +1219,91 @@ export default function WorkflowStudio() {
                                         itemIndex === index
                                           ? {
                                               ...item,
-                                              type,
-                                              config:
-                                                type === "webhook"
-                                                  ? { publicId: "" }
-                                                  : type === "scheduled"
-                                                    ? { cron: "0 * * * *" }
-                                                    : item.config,
+                                              config: {
+                                                ...item.config,
+                                                publicId: event.target.value,
+                                              },
                                             }
                                           : item,
                                     ),
-                                }));
-                              }}
-                            >
-                              <option value="manual">manual</option>
-                              {isOwner && (
-                                <option value="webhook">webhook</option>
-                              )}
-                              <option value="scheduled">scheduled</option>
-                              <option value="database_event">
-                                database event
-                              </option>
-                            </select>
-                            {trigger.type === "webhook" && (
-                              <input
-                                className="text-field"
-                                placeholder="Public webhook ID"
-                                value={String(trigger.config.publicId ?? "")}
-                                onChange={(event) =>
-                                  updateWorkflow((current) => ({
-                                    ...current,
-                                    workflow_triggers:
-                                      current.workflow_triggers.map(
-                                        (item, itemIndex) =>
-                                          itemIndex === index
-                                            ? {
-                                                ...item,
-                                                config: {
-                                                  ...item.config,
-                                                  publicId: event.target.value,
-                                                },
-                                              }
-                                            : item,
-                                      ),
-                                  }))
-                                }
-                              />
-                            )}
-                            {trigger.type === "scheduled" && (
-                              <input
-                                className="text-field"
-                                value={String(trigger.config.cron ?? "")}
-                                onChange={(event) =>
-                                  updateWorkflow((current) => ({
-                                    ...current,
-                                    workflow_triggers:
-                                      current.workflow_triggers.map(
-                                        (item, itemIndex) =>
-                                          itemIndex === index
-                                            ? {
-                                                ...item,
-                                                config: {
-                                                  ...item.config,
-                                                  cron: event.target.value,
-                                                },
-                                              }
-                                            : item,
-                                      ),
-                                  }))
-                                }
-                              />
-                            )}
-                            {trigger.type === "database_event" && (
-                              <small>
-                                Starts from the watched_orders event trigger.
-                              </small>
-                            )}
-                            <button
-                              className="ghost-button danger"
-                              onClick={() =>
+                                }))
+                              }
+                            />
+                          )}
+                          {trigger.type === "scheduled" && (
+                            <input
+                              className="text-field"
+                              value={String(trigger.config.cron ?? "")}
+                              onChange={(event) =>
                                 updateWorkflow((current) => ({
                                   ...current,
                                   workflow_triggers:
-                                    current.workflow_triggers.filter(
-                                      (_, itemIndex) => itemIndex !== index,
+                                    current.workflow_triggers.map(
+                                      (item, itemIndex) =>
+                                        itemIndex === index
+                                          ? {
+                                              ...item,
+                                              config: {
+                                                ...item.config,
+                                                cron: event.target.value,
+                                              },
+                                            }
+                                          : item,
                                     ),
                                 }))
                               }
-                            >
-                              Remove
-                            </button>
-                          </>
-                        ) : (
-                          <small>
-                            {trigger.type === "webhook"
-                              ? `Signed endpoint public ID: ${String(trigger.config.publicId ?? "not configured")}`
-                              : JSON.stringify(trigger.config)}
-                          </small>
-                        )}
-                        <em className="enabled">
-                          {trigger.enabled ? "Enabled" : "Disabled"}
-                        </em>
-                      </div>
-                    ))}
-                  </div>
-                  {workflow.workflow_triggers.some(
-                    (trigger) => trigger.type === "webhook",
-                  ) && (
-                    <p className="field-help">
-                      Webhook runs originate from the signed external{" "}
-                      <code>/webhookStartWorkflow</code> endpoint; this UI does
-                      not simulate them.
-                    </p>
-                  )}
-                </section>
-                <section className="activity-section">
-                  <div className="section-head">
-                    <span className="section-kicker">OBSERVABILITY</span>
-                    <h2>Selected run</h2>
-                  </div>
-                  {selectedRun ? (
-                    <div className="activity-list">
-                      {stepRuns.length ? (
-                        stepRuns.map((run) => (
-                          <div className="activity-item" key={run.id}>
-                            <span className={`activity-line ${run.status}`} />
-                            <time>{run.attempt_count}×</time>
-                            <div>
-                              <b>
-                                {(steps.find(
-                                  (step) => step.id === run.workflow_step_id,
-                                )?.config.title as string) ?? "Workflow step"}
-                              </b>
-                              <p>
-                                {run.error
-                                  ? JSON.stringify(run.error)
-                                  : run.status}
-                              </p>
-                            </div>
-                          </div>
-                        ))
+                            />
+                          )}
+                          {trigger.type === "database_event" && (
+                            <small>
+                              Starts from the watched_orders event trigger.
+                            </small>
+                          )}
+                          <button
+                            className="ghost-button danger"
+                            onClick={() =>
+                              updateWorkflow((current) => ({
+                                ...current,
+                                workflow_triggers:
+                                  current.workflow_triggers.filter(
+                                    (_, itemIndex) => itemIndex !== index,
+                                  ),
+                              }))
+                            }
+                          >
+                            Remove
+                          </button>
+                        </>
                       ) : (
-                        <p className="empty-copy">
-                          No step runs for this execution.
-                        </p>
+                        <small>
+                          {trigger.type === "webhook"
+                            ? `Signed endpoint public ID: ${String(trigger.config.publicId ?? "not configured")}`
+                            : JSON.stringify(trigger.config)}
+                        </small>
                       )}
+                      <em className="enabled">
+                        {trigger.enabled ? "Enabled" : "Disabled"}
+                      </em>
                     </div>
-                  ) : (
-                    <p className="empty-copy">
-                      Select or start a run to inspect step status.
-                    </p>
-                  )}
-                </section>
-              </div>
-            </>
+                  ))}
+                </div>
+                {workflow.workflow_triggers.some(
+                  (trigger) => trigger.type === "webhook",
+                ) && (
+                  <p className="field-help">
+                    Webhook runs originate from the signed external{" "}
+                    <code>/webhookStartWorkflow</code> endpoint; this UI does
+                    not simulate them.
+                  </p>
+                )}
+              </section>
+            </div>
           ) : (
             <div className="runs-view">
               <div className="runs-summary">
                 <div>
-                  <span className="section-kicker">RUN HISTORY</span>
                   <h2>Recent workflow runs</h2>
-                  <p>Past executions stay scoped to {organization.name}.</p>
+                  <p>Workflow activity for {organization.name}.</p>
                 </div>
               </div>
               {workflow.workflow_runs.length ? (
@@ -1410,6 +1330,40 @@ export default function WorkflowStudio() {
                 <p className="empty-copy">
                   No runs yet. Run this workflow to create the first execution.
                 </p>
+              )}
+              {selectedRun && (
+                <section className="activity-section">
+                  <div className="section-head">
+                    <h2>Selected run</h2>
+                    <StatusPill status={selectedRun.status} />
+                  </div>
+                  {stepRuns.length ? (
+                    <div className="activity-list">
+                      {stepRuns.map((run) => (
+                        <div className="activity-item" key={run.id}>
+                          <span className={`activity-line ${run.status}`} />
+                          <time>{run.attempt_count}×</time>
+                          <div>
+                            <b>
+                              {(steps.find(
+                                (step) => step.id === run.workflow_step_id,
+                              )?.config.title as string) ?? "Workflow step"}
+                            </b>
+                            <p>
+                              {run.error
+                                ? JSON.stringify(run.error)
+                                : run.status}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="empty-copy">
+                      No step runs for this execution.
+                    </p>
+                  )}
+                </section>
               )}
             </div>
           )}
